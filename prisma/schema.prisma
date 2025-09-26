@@ -274,3 +274,8 @@ model Usuarios {
 
   @@map("usuarios")
 }
+
+
+generator erd {
+  provider = "prisma-erd-generator"
+}

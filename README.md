@@ -87,3 +87,7 @@ Backend del proyecto Oh Sansi, desarrollado con Node.js, Express, TypeScript y P
    ```
    Mantiene tu rama sincronizada con la rama remota antes de subir nuevos cambios.
 
+8. Quita node_modules del staging en caso de haber errores en el deploy 
+   ```bash
+   git rm -r --cached node_modules
+   ```
