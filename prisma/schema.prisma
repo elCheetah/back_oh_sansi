@@ -276,6 +276,6 @@ model Usuarios {
 }
 
 
-generator erd {
-  provider = "prisma-erd-generator"
-}
+//generator erd {
+//  provider = "prisma-erd-generator"
+//}
