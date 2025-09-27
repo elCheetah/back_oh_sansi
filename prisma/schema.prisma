@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/**
+ * =========================
+ * Catálogos base
+ * =========================
+ */
+
 model Areas {
   id          Int     @id @default(autoincrement())
   codigo      String? @db.VarChar(50)
@@ -16,8 +22,47 @@ model Areas {
 
   config_medallas ConfigMedallas[]
   participacion   Participacion[]
+  asignaciones    Asignaciones[]
 
+  @@unique([nombre])
+  @@unique([codigo])
   @@map("areas")
+}
+
+
+model Niveles {
+  id          Int     @id @default(autoincrement())
+  codigo      String? @db.VarChar(50)
+  nombre      String  @db.VarChar(100)
+  descripcion String? @db.Text
+  estado      Boolean @default(true)
+
+  participacion   Participacion[]
+  config_medallas ConfigMedallas[]
+  asignaciones    Asignaciones[]
+
+  @@unique([nombre])
+  @@unique([codigo])
+  @@map("niveles")
+}
+
+
+model Asignaciones {
+  id         Int      @id @default(autoincrement())
+  usuario_id Int
+  area_id    Int
+  nivel_id   Int
+  activo     Boolean  @default(true)
+  creado_en  DateTime @default(now())
+
+  usuario Usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  area    Areas    @relation(fields: [area_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  nivel   Niveles  @relation(fields: [nivel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([usuario_id, area_id, nivel_id])
+  @@index([usuario_id])
+  @@index([area_id, nivel_id])
+  @@map("asignaciones")
 }
 
 model ConfigMedallas {
@@ -30,32 +75,12 @@ model ConfigMedallas {
   menciones Int @default(0)
 
   area  Areas   @relation(fields: [area_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  nivel Niveles @relation(fields: [nivel_id], references: [id], onDelete: Cascade)
+  nivel Niveles @relation(fields: [nivel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@unique([area_id, nivel_id])
   @@index([area_id])
   @@index([nivel_id])
   @@map("config_medallas")
-}
-
-model Evaluaciones {
-  id                  Int       @id @default(autoincrement())
-  participacion_id    Int
-  evaluador_id        Int?
-  fase_id             Int?
-  nota                Decimal
-  comentario          String?   @db.Text
-  creado_en           DateTime  @default(now())
-  validado            Boolean?  @default(false)
-  ultima_modificacion DateTime?
-
-  participacion Participacion @relation(fields: [participacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  evaluador     Usuarios?     @relation(fields: [evaluador_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  fase          Fases?        @relation(fields: [fase_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-
-  @@index([participacion_id])
-  @@index([evaluador_id])
-  @@index([fase_id])
-  @@map("evaluaciones")
 }
 
 enum EstadoFase {
@@ -74,58 +99,14 @@ model Fases {
   inicio      DateTime?
   fin         DateTime?
   estado      EstadoFase @default(PENDIENTE)
+  creado_en   DateTime   @default(now())
 
   evaluaciones Evaluaciones[]
 
+  @@unique([nombre])
   @@map("fases")
 }
 
-model Logs {
-  id             Int       @id @default(autoincrement())
-  entidad        String    @db.VarChar(100)
-  entidad_id     Int?
-  campo          String?   @db.VarChar(100)
-  valor_anterior String?   @db.Text
-  valor_nuevo    String?   @db.Text
-  usuario_id     Int
-  fecha_cambio   DateTime? @default(now())
-  motivo         String?   @db.Text
-
-  usuario Usuarios? @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([usuario_id])
-  @@map("logs")
-}
-
-enum RolEquipo {
-  LIDER
-  PARTICIPANTE
-}
-
-model MiembrosEquipo {
-  id            Int       @id @default(autoincrement())
-  olimpista_id  Int
-  nombre_equipo String    @db.VarChar(100)
-  rol_en_equipo RolEquipo
-
-  olimpista Olimpistas @relation(fields: [olimpista_id], references: [id], onDelete: Cascade)
-
-  @@index([olimpista_id])
-  @@map("miembros_equipo")
-}
-
-model Niveles {
-  id          Int     @id @default(autoincrement())
-  codigo      String? @db.VarChar(50)
-  nombre      String  @db.VarChar(100)
-  descripcion String? @db.Text
-  estado      Boolean @default(true)
-
-  participacion  Participacion[]
-  ConfigMedallas ConfigMedallas[]
-
-  @@map("niveles")
-}
 
 enum TipoDocumento {
   CI
@@ -140,114 +121,10 @@ enum Sexo {
   OTRO
 }
 
-model Olimpistas {
-  id               Int           @id @default(autoincrement())
-  nombre           String        @db.VarChar(100)
-  ap_paterno       String        @db.VarChar(100)
-  ap_materno       String?       @db.VarChar(100)
-  tipo_documento   TipoDocumento
-  numero_documento String        @db.VarChar(20)
-  unidad_educativa String        @db.VarChar(150)
-  departamento     String        @db.VarChar(100)
-  grado            String?       @db.VarChar(50)
-  fecha_nacimiento DateTime?
-  sexo             Sexo?
-  activo           Boolean       @default(true)
-  creado_en        DateTime      @default(now())
-
-  tutor_id        Int?
-  tutor           Tutores?         @relation(fields: [tutor_id], references: [id], onDelete: SetNull)
-  participacion   Participacion[]
-  miembros_equipo MiembrosEquipo[]
-
-  @@unique([tipo_documento, numero_documento])
-  @@map("olimpistas")
-}
-
-enum EstadoParticipacion {
-  CLASIFICADO
-  NO_CLASIFICADO
-  DESCALIFICADO
-}
-
-enum TipoParticipacion {
-  INDIVIDUAL
-  EQUIPO
-}
-
-model Participacion {
-  id           Int                 @id @default(autoincrement())
-  olimpista_id Int
-  area_id      Int
-  nivel_id     Int
-  estado       EstadoParticipacion @default(NO_CLASIFICADO)
-  tipo         TipoParticipacion
-
-  olimpista    Olimpistas     @relation(fields: [olimpista_id], references: [id], onDelete: Cascade)
-  area         Areas          @relation(fields: [area_id], references: [id], onDelete: Cascade)
-  nivel        Niveles        @relation(fields: [nivel_id], references: [id], onDelete: Cascade)
-  evaluaciones Evaluaciones[]
-
-  @@index([olimpista_id])
-  @@index([area_id])
-  @@index([nivel_id])
-  @@map("participacion")
-}
-
-model Reportes {
-  id           Int       @id @default(autoincrement())
-  tipo         String    @db.VarChar(100)
-  parametros   Json?     @db.JsonB
-  archivo      String?   @db.VarChar(255)
-  generado_por Int
-  generado_en  DateTime? @default(now())
-
-  generadoPor Usuarios? @relation(fields: [generado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([generado_por])
-  @@map("reportes")
-}
-
-model Roles {
-  id          Int     @id @default(autoincrement())
-  nombre      String  @unique @db.VarChar(50)
-  descripcion String? @db.Text
-
-  usuario_rol UsuarioRol[]
-
-  @@map("roles")
-}
-
-model Tutores {
-  id               Int           @id @default(autoincrement())
-  nombre           String        @db.VarChar(100)
-  ap_paterno       String        @db.VarChar(100)
-  ap_materno       String?       @db.VarChar(100)
-  tipo_documento   TipoDocumento
-  numero_documento String        @db.VarChar(20)
-  telefono         String?       @db.VarChar(20)
-  correo           String?       @db.VarChar(150)
-  unidad_educativa String        @db.VarChar(150)
-  profesion        String?       @db.VarChar(150)
-  creado_en        DateTime      @default(now())
-
-  olimpistas Olimpistas[]
-
-  @@unique([tipo_documento, numero_documento])
-  @@map("tutores")
-}
-
-model UsuarioRol {
-  id         Int  @id @default(autoincrement())
-  usuario_id Int?
-  rol_id     Int?
-
-  usuario Usuarios? @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  rol     Roles?    @relation(fields: [rol_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([usuario_id])
-  @@index([rol_id])
-  @@map("usuario_rol")
+enum Rol {
+  ADMINISTRADOR
+  EVALUADOR
+  RESPONSABLE
 }
 
 model Usuarios {
@@ -266,16 +143,188 @@ model Usuarios {
   estado           Boolean       @default(true)
   creado_en        DateTime      @default(now())
   actualizado_en   DateTime?
+  rol              Rol           @default(RESPONSABLE)
 
   evaluaciones Evaluaciones[]
   logs         Logs[]
   reportes     Reportes[]
-  usuario_rol  UsuarioRol[]
+  asignaciones Asignaciones[]
 
+  @@unique([tipo_documento, numero_documento])
   @@map("usuarios")
 }
 
+model Tutores {
+  id               Int           @id @default(autoincrement())
+  nombre           String        @db.VarChar(100)
+  ap_paterno       String        @db.VarChar(100)
+  ap_materno       String?       @db.VarChar(100)
+  tipo_documento   TipoDocumento
+  numero_documento String        @db.VarChar(20)
+  telefono         String        @db.VarChar(20)
+  correo           String        @db.VarChar(150)
+  unidad_educativa String        @db.VarChar(150)
+  profesion        String?       @db.VarChar(150)
+  creado_en        DateTime      @default(now())
 
-//generator erd {
-//  provider = "prisma-erd-generator"
-//}
+  olimpistas Olimpistas[]
+
+  @@unique([tipo_documento, numero_documento])
+  @@map("tutores")
+}
+
+model Olimpistas {
+  id               Int           @id @default(autoincrement())
+  nombre           String        @db.VarChar(100)
+  ap_paterno       String        @db.VarChar(100)
+  ap_materno       String?       @db.VarChar(100)
+  tipo_documento   TipoDocumento
+  numero_documento String        @db.VarChar(20)
+  unidad_educativa String        @db.VarChar(150)
+  departamento     String        @db.VarChar(100)
+  grado            String?       @db.VarChar(50)
+  fecha_nacimiento DateTime?
+  sexo             Sexo?
+  activo           Boolean       @default(true)
+  creado_en        DateTime      @default(now())
+
+  tutor_id        Int?
+  tutor           Tutores?         @relation(fields: [tutor_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  participacion   Participacion[]
+  miembros_equipo MiembrosEquipo[]
+
+  @@unique([tipo_documento, numero_documento])
+  @@map("olimpistas")
+}
+
+enum RolEquipo {
+  LIDER
+  PARTICIPANTE
+}
+
+model Equipos {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.VarChar(100)
+  creado_en DateTime @default(now())
+
+  miembros      MiembrosEquipo[]
+  participacion Participacion[]
+
+  @@unique([nombre])
+  @@map("equipos")
+}
+
+
+model MiembrosEquipo {
+  id            Int       @id @default(autoincrement())
+  olimpista_id  Int
+  equipo_id     Int
+  rol_en_equipo RolEquipo
+
+  olimpista Olimpistas @relation(fields: [olimpista_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  equipo    Equipos    @relation(fields: [equipo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([olimpista_id, equipo_id])
+  @@index([olimpista_id])
+  @@index([equipo_id])
+  @@map("miembros_equipo")
+}
+
+
+enum EstadoParticipacion {
+  CLASIFICADO
+  NO_CLASIFICADO
+  DESCALIFICADO
+}
+
+enum TipoParticipacion {
+  INDIVIDUAL
+  EQUIPO
+}
+
+model Participacion {
+  id           Int                 @id @default(autoincrement())
+  olimpista_id Int?
+  equipo_id    Int?
+  area_id      Int
+  nivel_id     Int
+  estado       EstadoParticipacion @default(NO_CLASIFICADO)
+  tipo         TipoParticipacion
+  creado_en    DateTime            @default(now())
+
+  olimpista Olimpistas? @relation(fields: [olimpista_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  equipo    Equipos?    @relation(fields: [equipo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  area      Areas       @relation(fields: [area_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  nivel     Niveles     @relation(fields: [nivel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  evaluaciones Evaluaciones[]
+
+  @@unique([olimpista_id, area_id, nivel_id])
+  @@unique([equipo_id, area_id, nivel_id])
+  @@index([olimpista_id])
+  @@index([equipo_id])
+  @@index([area_id])
+  @@index([nivel_id])
+  @@map("participacion")
+}
+
+
+model Evaluaciones {
+  id                  Int       @id @default(autoincrement())
+  participacion_id    Int
+  evaluador_id        Int
+  fase_id             Int
+  nota                Decimal   @db.Decimal(5, 2)
+  comentario          String?   @db.Text
+  creado_en           DateTime  @default(now())
+  validado            Boolean   @default(false)
+  ultima_modificacion DateTime?
+
+  participacion Participacion @relation(fields: [participacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  evaluador     Usuarios      @relation(fields: [evaluador_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  fase          Fases         @relation(fields: [fase_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([participacion_id, evaluador_id, fase_id])
+  @@index([participacion_id])
+  @@index([evaluador_id])
+  @@index([fase_id])
+  @@map("evaluaciones")
+}
+
+model Reportes {
+  id           Int      @id @default(autoincrement())
+  tipo         String   @db.VarChar(100)
+  titulo       String   @db.VarChar(150)
+  parametros   Json?    @db.JsonB
+  archivo      String?  @db.VarChar(255)
+  generado_por Int
+  generado_en  DateTime @default(now())
+
+  generadoPor Usuarios? @relation(fields: [generado_por], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([generado_por])
+  @@map("reportes")
+}
+
+model Logs {
+  id             Int      @id @default(autoincrement())
+  entidad        String   @db.VarChar(100)
+  entidad_id     Int?
+  campo          String?  @db.VarChar(100)
+  valor_anterior String?  @db.Text
+  valor_nuevo    String?  @db.Text
+  usuario_id     Int
+  fecha_cambio   DateTime @default(now())
+  motivo         String?  @db.Text
+
+  usuario Usuarios @relation(fields: [usuario_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([usuario_id])
+  @@map("logs")
+}
+
+/**
+ * generator erd {
+ * provider = "prisma-erd-generator"
+ * }
+ */
