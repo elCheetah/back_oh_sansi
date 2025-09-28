@@ -8,14 +8,19 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const database_1 = __importDefault(require("./config/database"));
+const importarCSVRoutes_1 = __importDefault(require("./routes/importarCSVRoutes"));
+const error_handler_1 = require("./middlewares/error-handler");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
+//ruta de apis 
+app.use('/api/importar', importarCSVRoutes_1.default);
 // Middlewares
 app.use((0, cors_1.default)());
 app.use((0, helmet_1.default)());
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
+app.use(error_handler_1.errorHandler);
 // Health Check
 app.get('/', async (req, res) => {
     try {
