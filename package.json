@@ -25,10 +25,12 @@
   "dependencies": {
     "@prisma/client": "^6.9.0",
     "cors": "^2.8.5",
+    "csv-parse": "^6.1.0",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
-    "multer": "^2.0.2"
+    "multer": "^2.0.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.12.0",
@@ -36,6 +38,7 @@
     "@types/express": "^5.0.1",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.14.1",
+    "@types/xlsx": "^0.0.35",
     "nodemon": "^3.1.9",
     "prisma": "^6.9.0",
     "prisma-erd-generator": "^2.1.0",
