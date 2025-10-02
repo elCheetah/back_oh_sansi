@@ -1,3 +1,5 @@
+
+/*
 // src/app.ts
 import express from 'express';
 import cors from 'cors';
@@ -25,3 +27,4 @@ app.get('/', (req, res) => {
 });
 
 export default app;
+*/
