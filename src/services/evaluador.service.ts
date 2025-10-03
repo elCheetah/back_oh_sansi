@@ -24,6 +24,7 @@ export async function registrarEvaluador(dto: RegistroEvaluadorDTO) {
     return { ok: false, status: 409, error: 'Ya existe un usuario con el mismo documento' };
   }
 
+  // 🔒 Hashear la contraseña (ignorar confirmPassword)
   const hash = await hashPassword(dto.password);
 
   const usuario = await prisma.usuarios.create({
@@ -41,6 +42,7 @@ export async function registrarEvaluador(dto: RegistroEvaluadorDTO) {
     },
   });
 
+  // 📧 Enviar correo de bienvenida
   try {
     await enviarCorreoBienvenida(usuario.correo, usuario.nombre);
   } catch (e) {
@@ -64,3 +66,4 @@ export async function registrarEvaluador(dto: RegistroEvaluadorDTO) {
     },
   };
 }
+
