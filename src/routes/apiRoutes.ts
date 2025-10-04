@@ -1,28 +1,4 @@
-// src/routes/apiRoutes.ts
-/*import { Router } from 'express';
-import {
-  crearArea,
-  listarAreas,
-  crearNivel,
-  listarNiveles
-} from '../controllers/areasController';
-import { validarDatosArea, validarDatosNivel } from '../middlewares/validarAreaNivel';
 
-const router = Router();
-
-/**
- * Rutas para áreas
- *//*
-router.post('/areas', validarDatosArea, crearArea);
-router.get('/areas', listarAreas);
-
-/**
- * Rutas para niveles
- *//*
-router.post('/niveles', validarDatosNivel, crearNivel);
-router.get('/niveles', listarNiveles);
-
-export default router;*/
 // src/routes/apiRoutes.ts
 import { Router } from 'express';
 import { validarDatosArea, validarDatosNivel } from '../middlewares/validarAreaNivel';
