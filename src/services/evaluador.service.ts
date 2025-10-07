@@ -1,5 +1,5 @@
 // services/evaluador.service.ts
-import prisma from '../config/prisma';
+import prisma from '../config/database';
 import { RegistroEvaluadorDTO } from '../types/evaluador.types';
 import { hashPassword } from '../utils/password';
 import { enviarCorreoBienvenida } from '../utils/mailer';

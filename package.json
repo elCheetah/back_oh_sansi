@@ -28,16 +28,21 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
+    "express-fileupload": "^1.5.2",
+    "googleapis": "^161.0.0",
     "helmet": "^8.1.0",
-    "nodemailer": "^7.0.6"
+    "nodemailer": "^7.0.6",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.12.0",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
+    "@types/express-fileupload": "^1.5.1",
     "@types/node": "^22.14.1",
     "@types/nodemailer": "^7.0.2",
+    "@types/xlsx": "^0.0.35",
     "nodemon": "^3.1.9",
     "prisma": "^6.16.3",
     "prisma-erd-generator": "^2.1.0",
