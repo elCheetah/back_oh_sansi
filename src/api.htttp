@@ -1,0 +1,17 @@
+// POST /api/evaluadores/registro
+
+Ejemplo como probar si esta funcionando la parte de la validacion 
+confirmar contraseña 
+
+{
+  "nombre": "juana",
+  "ap_paterno": "Pérez",
+  "ap_materno": "López",
+  "correo": "ana2@example55.com",
+  "password": "Secreta#1234",
+  "confirmPassword": "Diferente#1234",
+  "telefono": "76432180",
+  "tipo_documento": "CI",
+  "numero_documento": "12345978",
+  "aceptaTerminos": true
+}
