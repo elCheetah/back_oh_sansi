@@ -187,7 +187,7 @@ model Olimpistas {
   sexo             Sexo?
   activo           Boolean       @default(true)
   creado_en        DateTime      @default(now())
-
+  correo           String        @unique @db.VarChar(150)
   tutor_id        Int?
   tutor           Tutores?         @relation(fields: [tutor_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
   participacion   Participacion[]

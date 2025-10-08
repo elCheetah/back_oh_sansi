@@ -1,0 +1,49 @@
+// POST /api/evaluadores/registro
+
+Ejemplo como probar si esta funcionando la parte de la validacion 
+confirmar contraseña 
+
+{
+  "nombre": "juana",
+  "ap_paterno": "Pérez",
+  "ap_materno": "López",
+  "correo": "ana2@example55.com",
+  "password": "Secreta#1234",
+  "confirmPassword": "Diferente#1234",
+  "telefono": "76432180",
+  "tipo_documento": "CI",
+  "numero_documento": "12345978",
+  "aceptaTerminos": true
+}
+
+
+//Importar Archivos CSV
+POST http://localhost:3000/api/importar
+
+Requisitos:
+
+Método: POST
+
+Content-Type: multipart/form-data
+
+Campo obligatorio: archivo
+
+Acepta formatos .xlsx, .xls, .csv
+
+
+// forma de retorno 
+{
+  "ok": true,
+  "mensaje_exito": "Se insertaron 5 individuales y 2 equipos correctamente.",
+  "resumen": {
+    "totalProcesadas": 7,
+    "insertadasIndividual": 5,
+    "equiposInscritos": 2,
+    "miembrosInsertados": 8,
+    "filasDescartadas": 0,
+    "equiposRechazados": 0,
+    "totalWarnings": 0
+  },
+  "advertencias_por_fila": [],
+  "errores_por_fila": []
+}
