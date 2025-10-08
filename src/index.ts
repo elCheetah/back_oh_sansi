@@ -10,7 +10,7 @@ import niveleRoutes from './routes/nivelRoutes';
 import importarCSVRoutes from './routes/importarCSV.routes';
 import { manejoErrores } from './middlewares/manejo-errores';
 import evaluadorRoutes from './routes/evaluador.routes'; // 👈 Importamos tus rutas
-
+import asingarAreaNivelRoutes from './routes/asignar-area-nivel.routes'; 
 
 dotenv.config();
 
@@ -38,6 +38,8 @@ app.use('/api/evaluadores', evaluadorRoutes);
 app.use('/api/inscripciones', importarCSVRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/niveles', niveleRoutes);
+app.use('/api/asignaciones', niveleRoutes);
+
 // Health Check
 app.get('/', async (req, res) => {
   try {

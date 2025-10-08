@@ -10,6 +10,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const database_1 = __importDefault(require("./config/database"));
 const express_fileupload_1 = __importDefault(require("express-fileupload"));
+const areaRoutes_1 = __importDefault(require("./routes/areaRoutes"));
+const nivelRoutes_1 = __importDefault(require("./routes/nivelRoutes"));
 const importarCSV_routes_1 = __importDefault(require("./routes/importarCSV.routes"));
 const evaluador_routes_1 = __importDefault(require("./routes/evaluador.routes")); // 👈 Importamos tus rutas
 dotenv_1.default.config();
@@ -32,6 +34,9 @@ app.use(express_1.default.urlencoded({ extended: true }));
 // ✅ Registrar tus rutas
 app.use('/api/evaluadores', evaluador_routes_1.default);
 app.use('/api/inscripciones', importarCSV_routes_1.default);
+app.use('/api/areas', areaRoutes_1.default);
+app.use('/api/niveles', nivelRoutes_1.default);
+app.use('/api/asignar', nivelRoutes_1.default);
 // Health Check
 app.get('/', async (req, res) => {
     try {

@@ -47,3 +47,167 @@ Acepta formatos .xlsx, .xls, .csv
   "advertencias_por_fila": [],
   "errores_por_fila": []
 }
+
+
+
+// ==============================
+// Catálogos (para selects)
+// ==============================
+
+// GET /asignaciones/areas
+GET http://localhost:3000/asignaciones/areas
+
+
+// GET /asignaciones/niveles
+GET http://localhost:3000/asignaciones/niveles
+
+
+// GET /asignaciones/roles
+// Solo: RESPONSABLE, EVALUADOR
+GET http://localhost:3000/asignaciones/roles
+
+
+
+// ==============================
+// Listado para la grilla
+// ==============================
+
+// GET /asignaciones/lista
+// Columnas: Usuario, Rol, Area, Nivel (cuando no tenga, devuelve "Sin designar")
+GET http://localhost:3000/asignaciones/lista
+
+// forma de retorno
+// {
+//   "columnas": ["Usuario","Rol","Area","Nivel"],
+//   "filas": [
+//     {
+//       "usuarioId": 12,
+//       "usuario": "Ana Pérez",
+//       "rol": "EVALUADOR",
+//       "asignacionId": 45,
+//       "area": "Matemática",
+//       "nivel": "Nivel 2",
+//       "area_id": 3,
+//       "nivel_id": 2
+//     },
+//     {
+//       "usuarioId": 13,
+//       "usuario": "Juan Rojas",
+//       "rol": "RESPONSABLE",
+//       "asignacionId": null,
+//       "area": "Sin designar",
+//       "nivel": "Sin designar",
+//       "area_id": null,
+//       "nivel_id": null
+//     }
+//   ]
+// }
+
+
+
+// ==============================
+// Datos para precargar el modal
+// ==============================
+
+// GET /asignaciones/usuario/:usuarioId
+GET http://localhost:3000/asignaciones/usuario/12
+
+// forma de retorno
+// {
+//   "usuarioId": 12,
+//   "nombreCompleto": "Ana Pérez López",
+//   "rol": "EVALUADOR",
+//   "asignacionId": 45,
+//   "areaActual": { "id": 3, "nombre": "Matemática" },
+//   "nivelActual": { "id": 2, "nombre": "Nivel 2" }
+// }
+
+
+
+// ==============================
+// Designar / Actualizar (transaccional)
+// ==============================
+
+// POST /asignaciones/designar
+// Reglas:
+//  - En (área, nivel) solo puede existir 1 RESPONSABLE activo.
+//  - EVALUADOR puede repetirse.
+//  - Si no hay asignación activa => crea; si hay => actualiza.
+//  - Cambia Usuarios.rol solo si difiere.
+//  - Deben venir areaId y nivelId (no se admite solo nivel).
+POST http://localhost:3000/asignaciones/designar
+Content-Type: application/json
+x-usuario-id: 1
+
+{
+  "usuarioId": 12,
+  "areaId": 3,
+  "nivelId": 2,
+  "rol": "RESPONSABLE",
+  "motivo": "Asignación inicial 2025"
+}
+
+// forma de retorno
+// {
+//   "mensaje": "Designación aplicada correctamente.",
+//   "asignacion": {
+//     "id": 45,
+//     "usuario_id": 12,
+//     "area": { "id": 3, "nombre": "Matemática" },
+//     "nivel": { "id": 2, "nombre": "Nivel 2" }
+//   },
+//   "rolAplicado": "RESPONSABLE"
+// }
+
+
+
+// POST /asignaciones/designar (como EVALUADOR)
+POST http://localhost:3000/asignaciones/designar
+Content-Type: application/json
+x-usuario-id: 1
+
+{
+  "usuarioId": 12,
+  "areaId": 3,
+  "nivelId": 2,
+  "rol": "EVALUADOR",
+  "motivo": "Refuerzo de jurados"
+}
+
+
+
+// POST /asignaciones/designar (colisión de RESPONSABLE en misma área/nivel) => 409 esperado
+POST http://localhost:3000/asignaciones/designar
+Content-Type: application/json
+x-usuario-id: 1
+
+{
+  "usuarioId": 99,
+  "areaId": 3,
+  "nivelId": 2,
+  "rol": "RESPONSABLE",
+  "motivo": "Prueba de unicidad"
+}
+
+// forma de error (ejemplo 409)
+// {
+//   "mensaje": "Operación fallida",
+//   "detalle": "Ya existe un RESPONSABLE activo para esa combinación de área y nivel.",
+//   "codigo": undefined
+// }
+
+
+
+// ==============================
+// Eliminar físicamente una asignación
+// ==============================
+
+// DELETE /asignaciones/:asignacionId
+// Solo elimina en tabla asignaciones. No modifica Usuarios.rol.
+DELETE http://localhost:3000/asignaciones/45?motivo=Reorganizacion%20de%20equipos
+x-usuario-id: 1
+
+// forma de retorno
+// {
+//   "mensaje": "Asignación eliminada correctamente."
+// }
