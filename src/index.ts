@@ -5,6 +5,8 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import prisma from './config/database';
 import fileUpload from 'express-fileupload';
+import areaRoutes from './routes/areaRoutes';
+import niveleRoutes from './routes/nivelRoutes';
 import importarCSVRoutes from './routes/importarCSV.routes';
 import { manejoErrores } from './middlewares/manejo-errores';
 import evaluadorRoutes from './routes/evaluador.routes'; // 👈 Importamos tus rutas
@@ -34,6 +36,8 @@ app.use(express.urlencoded({ extended: true }));
 // ✅ Registrar tus rutas
 app.use('/api/evaluadores', evaluadorRoutes);
 app.use('/api/inscripciones', importarCSVRoutes);
+app.use('/api/areas', areaRoutes);
+app.use('/api/niveles', niveleRoutes);
 // Health Check
 app.get('/', async (req, res) => {
   try {
@@ -43,6 +47,7 @@ app.get('/', async (req, res) => {
     res.status(500).json({ status: 'error', db: 'not connected' });
   }
 });
+
 
 // Iniciar servidor
 app.listen(PORT, () => {
