@@ -33,20 +33,63 @@ Acepta formatos .xlsx, .xls, .csv
 
 // forma de retorno 
 {
-  "ok": true,
-  "mensaje_exito": "Se insertaron 5 individuales y 2 equipos correctamente.",
+  "ok": false,
+  "mensaje_exito": "Procesado parcialmente: algunas filas fueron insertadas correctamente, otras fueron rechazadas.",
   "resumen": {
-    "totalProcesadas": 7,
-    "insertadasIndividual": 5,
-    "equiposInscritos": 2,
-    "miembrosInsertados": 8,
-    "filasDescartadas": 0,
-    "equiposRechazados": 0,
-    "totalWarnings": 0
+    "totalProcesadas": 10,
+    "insertadasIndividual": 1,
+    "equiposInscritos": 1,
+    "miembrosInsertados": 3,
+    "filasDescartadas": 4,
+    "equiposRechazados": 2,
+    "totalWarnings": 2
   },
-  "advertencias_por_fila": [],
-  "errores_por_fila": []
+  "advertencias_por_fila": [
+    {
+      "fila": 3,
+      "codigo": "W-TUT-DIFF-001",
+      "mensaje": "El tutor ya existía con datos diferentes; se conservó el registro anterior."
+    },
+    {
+      "fila": 7,
+      "codigo": "W-LEAD-AUTO-201",
+      "mensaje": "No se definió líder en el equipo, se asignó automáticamente al primer integrante."
+    }
+  ],
+  "errores_por_fila": [
+    {
+      "fila": 1,
+      "codigo": "E-OLI-EMAIL-UNQ-001",
+      "mensaje": "No se insertó a Carlos Rojas Vega porque: correo duplicado en otro registro."
+    },
+    {
+      "fila": 4,
+      "codigo": "E-PART-IND-001",
+      "mensaje": "No se insertó a Fernanda Arce López porque: ya tiene participación registrada en esta área y nivel."
+    },
+    {
+      "fila": 8,
+      "codigo": "E-EQP-MIN-001",
+      "mensaje": "No se insertó al equipo \"Equipo Alfa\" porque: tiene menos de 3 miembros válidos."
+    },
+    {
+      "fila": 9,
+      "codigo": "E-PART-EQP-001",
+      "mensaje": "No se insertó al equipo \"Equipo Beta\" porque: ya estaba registrado en esta área y nivel."
+    }
+  ],
+  "equipos_rechazados": [
+    {
+      "equipo": "Equipo Alfa",
+      "motivo": "Menos de 3 miembros válidos."
+    },
+    {
+      "equipo": "Equipo Beta",
+      "motivo": "Duplicado en área/nivel de participación."
+    }
+  ]
 }
+
 
 
 
