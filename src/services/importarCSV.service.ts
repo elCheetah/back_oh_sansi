@@ -16,6 +16,11 @@ type GrupoEquipo = {
     errores: ErrorFila[];
 };
 
+function etiquetaPersona(f: FilaImportacion): string {
+    const nombre = [f.OLI_NOMBRE, f.OLI_AP_PAT, f.OLI_AP_MAT].filter(Boolean).join(' ');
+    return nombre || 'la persona';
+}
+
 async function correoOlimpistaEnUso(correo: string, docTipo: string, docNum: string): Promise<boolean> {
     const dueñoCorreo = await prisma.olimpistas.findUnique({
         where: { correo },
@@ -25,9 +30,23 @@ async function correoOlimpistaEnUso(correo: string, docTipo: string, docNum: str
     return !(dueñoCorreo.tipo_documento === (docTipo as any) && dueñoCorreo.numero_documento === docNum);
 }
 
-async function obtenerOlimpistaId(fila: FilaImportacion, warnPush: (w: WarningFila) => void, errPush: (e: ErrorFila) => void, filaNum: number): Promise<number | null> {
+async function obtenerOlimpistaId(
+    fila: FilaImportacion,
+    warnPush: (w: WarningFila) => void,
+    errPush: (e: ErrorFila) => void,
+    filaNum: number
+): Promise<number | null> {
+    const quien = etiquetaPersona(fila);
+
     if (await correoOlimpistaEnUso(fila.OLI_CORREO, fila.OLI_TDOC, fila.OLI_NRODOC)) {
-        errPush({ fila: filaNum, codigo: 'E-OLI-EMAIL-UNQ-001', columna: 'OLI_CORREO', valor: fila.OLI_CORREO, mensaje: MENSAJES.errores['E-OLI-EMAIL-UNQ-001'](fila.OLI_CORREO) });
+        errPush({
+            fila: filaNum,
+            codigo: 'E-OLI-EMAIL-UNQ-001',
+            columna: 'OLI_CORREO',
+            valor: fila.OLI_CORREO,
+            mensaje: MENSAJES.errores['E-OLI-EMAIL-UNQ-001'](fila.OLI_CORREO),
+            quien,
+        });
         return null;
     }
 
@@ -49,11 +68,7 @@ async function obtenerOlimpistaId(fila: FilaImportacion, warnPush: (w: WarningFi
             (fila.OLI_DEPTO && fila.OLI_DEPTO !== existente.departamento) ||
             (fila.OLI_CORREO && fila.OLI_CORREO !== existente.correo)
         ) {
-            warnPush({
-                fila: filaNum,
-                codigo: 'W-OLI-DIFF-001',
-                mensaje: MENSAJES.warnings['W-OLI-DIFF-001'](),
-            });
+            warnPush({ fila: filaNum, codigo: 'W-OLI-DIFF-001', mensaje: MENSAJES.warnings['W-OLI-DIFF-001'](), quien });
         }
         return existente.id;
     }
@@ -78,7 +93,12 @@ async function obtenerOlimpistaId(fila: FilaImportacion, warnPush: (w: WarningFi
     return creado.id;
 }
 
-async function obtenerTutorId(fila: FilaImportacion, warnPush: (w: WarningFila) => void, filaNum: number): Promise<number> {
+async function obtenerTutorId(
+    fila: FilaImportacion,
+    warnPush: (w: WarningFila) => void,
+    filaNum: number
+): Promise<number> {
+    const quien = etiquetaPersona(fila);
     const existente = await prisma.tutores.findUnique({
         where: {
             tipo_documento_numero_documento: {
@@ -95,11 +115,7 @@ async function obtenerTutorId(fila: FilaImportacion, warnPush: (w: WarningFila) 
             (fila.TUTOR_TEL && fila.TUTOR_TEL !== existente.telefono) ||
             (fila.TUTOR_CORREO && fila.TUTOR_CORREO !== existente.correo)
         ) {
-            warnPush({
-                fila: filaNum,
-                codigo: 'W-TUT-DIFF-001',
-                mensaje: MENSAJES.warnings['W-TUT-DIFF-001'](),
-            });
+            warnPush({ fila: filaNum, codigo: 'W-TUT-DIFF-001', mensaje: MENSAJES.warnings['W-TUT-DIFF-001'](), quien });
         }
         return existente.id;
     }
@@ -156,6 +172,7 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
                 fila: c.fila,
                 codigo: 'E-PART-IND-001',
                 mensaje: MENSAJES.errores['E-PART-IND-001'](),
+                quien: etiquetaPersona(c.filaOriginal),
             });
         } else {
             vistosInd.add(k);
@@ -172,12 +189,12 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
         }
         const g = grupos.get(k)!;
         if (g.areaId !== c.areaId || g.nivelId !== c.nivelId) {
-            g.errores.push({ fila: c.fila, codigo: 'E-EQP-AREA-001', mensaje: MENSAJES.errores['E-EQP-AREA-001']() });
+            g.errores.push({ fila: c.fila, codigo: 'E-EQP-AREA-001', mensaje: MENSAJES.errores['E-EQP-AREA-001'](), quien: `el equipo "${k}"` });
             continue;
         }
         const dup = g.miembros.find(m => m.olimpistaDoc.tipo === c.olimpistaDoc.tipo && m.olimpistaDoc.numero === c.olimpistaDoc.numero);
         if (dup) {
-            g.warnings.push({ fila: c.fila, codigo: 'W-MIEM-DUP-KEEP-001', mensaje: MENSAJES.warnings['W-MIEM-DUP-KEEP-001']() });
+            g.warnings.push({ fila: c.fila, codigo: 'W-MIEM-DUP-KEEP-001', mensaje: MENSAJES.warnings['W-MIEM-DUP-KEEP-001'](), quien: `el equipo "${k}"` });
             continue; // conserva el primero
         }
         g.miembros.push(c);
@@ -192,8 +209,8 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
     // INDIVIDUAL
     for (const c of candidatosIndFiltrados) {
         try {
-            const warnPush = (w: WarningFila) => { w.fila = c.fila; warnings.push(w); };
-            const errPush = (e: ErrorFila) => { e.fila = c.fila; errores.push(e); };
+            const warnPush = (w: WarningFila) => { w.fila = c.fila; w.quien = etiquetaPersona(c.filaOriginal); warnings.push(w); };
+            const errPush = (e: ErrorFila) => { e.fila = c.fila; e.quien = etiquetaPersona(c.filaOriginal); errores.push(e); };
 
             const tutorId = await obtenerTutorId(c.filaOriginal, warnPush, c.fila);
             const olimpistaId = await obtenerOlimpistaId(c.filaOriginal, warnPush, errPush, c.fila);
@@ -211,7 +228,7 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
                 select: { id: true },
             });
             if (existe) {
-                errores.push({ fila: c.fila, codigo: 'E-PART-IND-001', mensaje: MENSAJES.errores['E-PART-IND-001']() });
+                errores.push({ fila: c.fila, codigo: 'E-PART-IND-001', mensaje: MENSAJES.errores['E-PART-IND-001'](), quien: etiquetaPersona(c.filaOriginal) });
                 continue;
             }
 
@@ -226,7 +243,7 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
             });
             insertadasIndividual += 1;
         } catch (e: any) {
-            errores.push({ fila: c.fila, codigo: 'E-PART-IND-001', mensaje: `Error al insertar participación individual: ${e.message}` });
+            errores.push({ fila: c.fila, codigo: 'E-PART-IND-001', mensaje: `Error al insertar participación individual: ${e.message}`, quien: etiquetaPersona(c.filaOriginal) });
         }
     }
 
@@ -236,6 +253,7 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
         if (grupo.errores.length) {
             equiposRechazados += 1;
             equiposRechazadosArr.push({ equipo: nombre, motivo: 'Área/Nivel inconsistente entre filas.' });
+            for (const e of grupo.errores) e.quien = e.quien || `el equipo "${nombre}"`;
             errores.push(...grupo.errores);
             continue;
         }
@@ -244,14 +262,14 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
         const tieneLider = grupo.miembros.some((m) => m.rolEquipo === 'LIDER');
         if (!tieneLider && grupo.miembros.length > 0) {
             grupo.miembros[0].rolEquipo = 'LIDER';
-            grupo.warnings.push({ fila: grupo.miembros[0].fila, codigo: 'W-LEAD-AUTO-201', mensaje: MENSAJES.warnings['W-LEAD-AUTO-201']() });
+            grupo.warnings.push({ fila: grupo.miembros[0].fila, codigo: 'W-LEAD-AUTO-201', mensaje: MENSAJES.warnings['W-LEAD-AUTO-201'](), quien: `el equipo "${nombre}"` });
         }
 
         // Mínimo 3
         if (grupo.miembros.length < 3) {
             equiposRechazados += 1;
             for (const m of grupo.miembros) {
-                errores.push({ fila: m.fila, codigo: 'E-EQP-MIN-001', mensaje: MENSAJES.errores['E-EQP-MIN-001']() });
+                errores.push({ fila: m.fila, codigo: 'E-EQP-MIN-001', mensaje: MENSAJES.errores['E-EQP-MIN-001'](), quien: `el equipo "${nombre}"` });
             }
             equiposRechazadosArr.push({ equipo: nombre, motivo: 'Menos de 3 miembros válidos.' });
             continue;
@@ -271,8 +289,7 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
                 let miembrosCreados = 0;
 
                 for (const m of grupo.miembros) {
-                    const warnPush = (w: WarningFila) => { w.fila = m.fila; grupo.warnings.push(w); };
-                    const errPush = (e: ErrorFila) => { e.fila = m.fila; grupo.errores.push(e); };
+                    const warnPush = (w: WarningFila) => { w.fila = m.fila; w.quien = `el equipo "${nombre}"`; grupo.warnings.push(w); };
 
                     // Tutor
                     let tutorIdFinal: number;
@@ -383,7 +400,7 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
         } catch (e: any) {
             equiposRechazados += 1;
             for (const m of grupo.miembros) {
-                errores.push({ fila: m.fila, codigo: 'E-PART-EQP-001', mensaje: e.message });
+                errores.push({ fila: m.fila, codigo: 'E-PART-EQP-001', mensaje: e.message, quien: `el equipo "${nombre}"` });
             }
         }
     }
@@ -403,6 +420,6 @@ export async function procesarImportacion(filas: any[]): Promise<ResultadoImport
         eqRech: equiposRechazados,
         warnings,
         errores,
-        equiposRechazadosArr: [], // ya informamos por fila; puedes listar por equipo si quieres
+        equiposRechazadosArr: [],
     });
 }

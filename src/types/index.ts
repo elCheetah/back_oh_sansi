@@ -22,6 +22,7 @@ export type ErrorFila = {
     columna?: string;
     valor?: string;
     mensaje: string;
+    quien?: string;
 };
 
 export type WarningFila = {
@@ -30,6 +31,7 @@ export type WarningFila = {
     columna?: string;
     valor?: string;
     mensaje: string;
+    quien?: string;
 };
 
 export type CandidatoComun = {
@@ -53,8 +55,8 @@ export type CandidatoEquipo = CandidatoComun & {
 
 export type ResultadoImportacion = {
     ok: boolean;
-    mensaje_exito?: string;     
-    mensaje_error?: string;     
+    mensaje_exito?: string;  // cuando hubo inserciones
+    mensaje_error?: string;  // cuando NO hubo inserciones
     resumen: {
         totalProcesadas: number;
         insertadasIndividual: number;
@@ -64,7 +66,7 @@ export type ResultadoImportacion = {
         equiposRechazados: number;
         totalWarnings: number;
     };
-    advertencias_por_fila: WarningFila[];
-    errores_por_fila: ErrorFila[];
+    advertencias_por_fila: Array<{ fila: number; mensaje: string }>;
+    errores_por_fila: Array<{ fila: number; mensaje: string }>;
     equipos_rechazados: { equipo: string; motivo: string }[];
 };

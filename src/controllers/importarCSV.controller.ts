@@ -4,11 +4,11 @@ import { subirYReemplazarContenido, leerContenidoPrimeraHoja } from './../utils/
 import { procesarImportacion } from './../services/importarCSV.service';
 
 const HEADERS_ESPERADOS = [
-  'TIPO_PART','AREA_COD','AREA_NOM','NIVEL_COD','NIVEL_NOM','OLI_TDOC','OLI_NRODOC',
-  'OLI_NOMBRE','OLI_AP_PAT','OLI_AP_MAT','OLI_UNID_EDU','OLI_DEPTO','OLI_GRADO',
-  'OLI_F_NAC','OLI_SEXO','OLI_CORREO','TUTOR_TDOC','TUTOR_NRODOC','TUTOR_NOMBRE',
-  'TUTOR_AP_PAT','TUTOR_AP_MAT','TUTOR_TEL','TUTOR_CORREO','TUTOR_UNID_EDU',
-  'TUTOR_PROF','EQUIPO_NOMBRE','ROL_EQUIPO'
+  'TIPO_PART', 'AREA_COD', 'AREA_NOM', 'NIVEL_COD', 'NIVEL_NOM', 'OLI_TDOC', 'OLI_NRODOC',
+  'OLI_NOMBRE', 'OLI_AP_PAT', 'OLI_AP_MAT', 'OLI_UNID_EDU', 'OLI_DEPTO', 'OLI_GRADO',
+  'OLI_F_NAC', 'OLI_SEXO', 'OLI_CORREO', 'TUTOR_TDOC', 'TUTOR_NRODOC', 'TUTOR_NOMBRE',
+  'TUTOR_AP_PAT', 'TUTOR_AP_MAT', 'TUTOR_TEL', 'TUTOR_CORREO', 'TUTOR_UNID_EDU',
+  'TUTOR_PROF', 'EQUIPO_NOMBRE', 'ROL_EQUIPO'
 ];
 
 function esExtensionSoportada(nombre: string) {
@@ -18,7 +18,6 @@ function esExtensionSoportada(nombre: string) {
 
 export async function importarDesdeArchivo(req: Request, res: Response) {
   try {
-    // 1) archivo obligatorio
     if (!('files' in req) || !req.files || !(req.files as any).archivo) {
       return res.status(400).json({ ok: false, mensaje: 'Debe enviar un archivo en el campo "archivo" (xlsx/xls/csv).' });
     }
@@ -26,37 +25,28 @@ export async function importarDesdeArchivo(req: Request, res: Response) {
     if (!esExtensionSoportada(archivo.name)) {
       return res.status(400).json({ ok: false, mensaje: 'Formato no soportado. Use .xlsx, .xls o .csv.' });
     }
-
-    // 2) Parsear SOLO para poder subir (sin validar nada)
     let filasArchivo: any[] = [];
     try {
-      const wb = XLSX.read(archivo.data, { type: 'buffer' }); // soporta xlsx/xls/csv
+      const wb = XLSX.read(archivo.data, { type: 'buffer' });
       const hoja = wb.Sheets[wb.SheetNames[0]];
       filasArchivo = XLSX.utils.sheet_to_json(hoja, { defval: '' });
       if (!filasArchivo.length) {
         return res.status(400).json({ ok: false, mensaje: 'El archivo no tiene filas de datos.' });
       }
     } catch (e: any) {
-      console.error('❌ Error al parsear el archivo:', e);
+      console.error('Error al parsear el archivo:', e);
       return res.status(400).json({ ok: false, mensaje: 'No se pudo leer el archivo. Verifique el formato.' });
     }
-
-    // 3) SUBIR primero al Google Sheet (primera hoja)
     try {
       await subirYReemplazarContenido(filasArchivo);
-      console.log('✅ Google Sheets actualizado.');
+      console.log('Google Sheets actualizado.');
     } catch (e: any) {
-      console.error('⚠️ Falló la sincronización con Google Sheets:', e?.message || e);
-      // igual seguimos: BD manda
+      console.error('Falló la sincronización con Google Sheets:', e?.message || e);
     }
-
-    // 4) LEER del Google Sheet (primera hoja) y recién ahí validar/insertar
     const filas = await leerContenidoPrimeraHoja();
     if (!filas.length) {
-      return res.status(400).json({ ok: false, mensaje: 'La hoja en Google Sheets está vacía.' });
+      return res.status(400).json({ ok: false, mensaje: 'La primera hoja en Google Sheets está vacía.' });
     }
-
-    // Valido headers DESPUÉS de subir (no antes)
     const headersLeidos = Object.keys(filas[0]);
     const faltantes = HEADERS_ESPERADOS.filter((h) => !headersLeidos.includes(h));
     if (faltantes.length) {
@@ -66,8 +56,6 @@ export async function importarDesdeArchivo(req: Request, res: Response) {
         detalle: { faltantes, headers_recibidos: headersLeidos },
       });
     }
-
-    // 5) Procesar / insertar
     const resultado = await procesarImportacion(filas);
 
     const anyIns =
@@ -76,7 +64,6 @@ export async function importarDesdeArchivo(req: Request, res: Response) {
       resultado.resumen.miembrosInsertados > 0;
 
     if (!anyIns) {
-      // Nada se insertó ⇒ falla controlada
       return res.status(400).json({
         ok: false,
         mensaje_error: resultado.mensaje_error || 'Procesado pero NO se insertó nada en la base de datos.',
@@ -86,11 +73,10 @@ export async function importarDesdeArchivo(req: Request, res: Response) {
         equipos_rechazados: resultado.equipos_rechazados,
       });
     }
-
     // Hubo inserciones
     return res.status(200).json(resultado);
   } catch (err: any) {
-    console.error('💥 Error no controlado en importarDesdeArchivo:', err);
+    console.error('Error no controlado en importarDesdeArchivo:', err);
     return res.status(err?.status || 500).json({
       ok: false,
       mensaje: err?.message || 'Error inesperado al importar.',
