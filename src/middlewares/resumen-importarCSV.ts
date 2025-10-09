@@ -1,34 +1,68 @@
 import { ResultadoImportacion, WarningFila, ErrorFila } from './../types';
 import { MENSAJES } from './../messages/catalogo';
 
-function mergeByFila(
-  items: Array<ErrorFila | WarningFila>,
-  opts: { prefixOk: string; prefixFail: string; isError: boolean }
-): Array<{ fila: number; mensaje: string }> {
-  const map = new Map<number, { quien?: string; mensajes: string[] }>();
+/**
+ * Agrupa errores que tengan exactamente el mismo mensaje base
+ * (sin importar el número de fila).
+ */
+function agruparErroresPorMensaje(errores: ErrorFila[]): Array<{ filas: string; mensaje: string }> {
+  const mapa = new Map<string, number[]>();
 
-  for (const it of items) {
-    const entry = map.get(it.fila) || { quien: it.quien, mensajes: [] };
-    if (!entry.quien && it.quien) entry.quien = it.quien;
-    const texto = it.mensaje || '';
-    if (texto) entry.mensajes.push(texto);
-    map.set(it.fila, entry);
+  for (const e of errores) {
+    // Limpiamos el texto para que no afecte "fila X"
+    const baseMsg = e.mensaje
+      .replace(/la fila\s*\d+/gi, '')
+      .replace(/No se insertó a la fila\s*\d+/gi, '')
+      .trim();
+
+    if (!mapa.has(baseMsg)) {
+      mapa.set(baseMsg, [e.fila]);
+    } else {
+      mapa.get(baseMsg)!.push(e.fila);
+    }
   }
 
-  const result: Array<{ fila: number; mensaje: string }> = [];
-  for (const [fila, info] of map.entries()) {
-    const sujeto = info.quien ? info.quien : `la fila ${fila}`;
-    const joined = info.mensajes.join('; ');
-    const m =
-      opts.isError
-        ? `${opts.prefixFail} ${sujeto} porque: ${joined}.`
-        : `${opts.prefixOk} ${sujeto}${joined ? `: ${joined}.` : '.'}`;
-    result.push({ fila, mensaje: m });
+  const resultado: Array<{ filas: string; mensaje: string }> = [];
+  for (const [mensaje, filas] of mapa.entries()) {
+    const filasStr = filas.length > 1 ? filas.join(',') : String(filas[0]);
+    resultado.push({ filas: filasStr, mensaje: mensaje.trim() });
   }
-  result.sort((a, b) => a.fila - b.fila);
-  return result;
+
+  // Ordenar por primera fila
+  return resultado.sort((a, b) => {
+    const fa = parseInt(a.filas.split(',')[0]);
+    const fb = parseInt(b.filas.split(',')[0]);
+    return fa - fb;
+  });
 }
 
+/**
+ * Une advertencias por fila (sin tocar errores, que se agrupan después).
+ */
+function mergeAdvertencias(
+  items: WarningFila[]
+): Array<{ fila: number; mensaje: string }> {
+  const map = new Map<number, string[]>();
+  for (const w of items) {
+    const arr = map.get(w.fila) || [];
+    arr.push(w.mensaje);
+    map.set(w.fila, arr);
+  }
+
+  const salida: Array<{ fila: number; mensaje: string }> = [];
+  for (const [fila, mensajes] of map.entries()) {
+    salida.push({
+      fila,
+      mensaje: `Se insertó con advertencia${mensajes.length > 1 ? 's' : ''}: ${mensajes.join('; ')}.`,
+    });
+  }
+
+  return salida.sort((a, b) => a.fila - b.fila);
+}
+
+/**
+ * Construye el JSON de retorno final del proceso de importación CSV.
+ */
 export function construirRespuesta(params: {
   procesadas: number;
   insInd: number;
@@ -49,43 +83,47 @@ export function construirRespuesta(params: {
     equiposRechazados: params.eqRech,
     totalWarnings: params.warnings.length,
   };
-  const erroresConsolidados = mergeByFila(params.errores, {
-    isError: true,
-    prefixFail: 'No se insertó a',
-    prefixOk: '',
-  });
 
-  const advertenciasConsolidadas = mergeByFila(params.warnings, {
-    isError: false,
-    prefixOk: 'Se insertó con advertencia a',
-    prefixFail: '',
-  });
+  // Agrupar errores repetidos por mensaje común
+  const erroresAgrupados = agruparErroresPorMensaje(params.errores);
+
+  // Agrupar advertencias
+  const advertenciasAgrupadas = mergeAdvertencias(params.warnings);
 
   const algoInsertado = params.insInd > 0 || params.eqIns > 0 || params.miemIns > 0;
 
+  // Si nada se insertó:
   if (!algoInsertado) {
     return {
       ok: false,
-      mensaje_error: 'Procesado pero SIN inserciones en la base de datos. Revise los errores por fila.',
+      mensaje_error:
+        'Procesado pero SIN inserciones en la base de datos. Revise los errores agrupados por equipo o filas relacionadas.',
       resumen,
-      advertencias_por_fila: advertenciasConsolidadas.map(a => ({ fila: a.fila, mensaje: a.mensaje } as any)),
-      errores_por_fila: erroresConsolidados.map(e => ({ fila: e.fila, mensaje: e.mensaje } as any)),
+      advertencias_por_fila: advertenciasAgrupadas,
+      errores_por_fila: erroresAgrupados.map((e) => ({
+        fila: e.filas,
+        mensaje: e.mensaje,
+      })) as any,
       equipos_rechazados: params.equiposRechazadosArr,
     };
   }
+
+  // Si hubo éxito parcial o total
   const base = MENSAJES.confirmacionGlobal(resumen);
-  const cualificador =
+  const sufijo =
     params.descartadas > 0 || params.eqRech > 0
-      ? ' (se encontraron filas con error que fueron rechazadas)'
-      : '';
-  const mensaje_exito = `${base}${cualificador}`;
+      ? ' (algunas filas fueron rechazadas o presentaron errores).'
+      : '.';
 
   return {
     ok: true,
-    mensaje_exito,
+    mensaje_exito: `${base}${sufijo}`,
     resumen,
-    advertencias_por_fila: advertenciasConsolidadas.map(a => ({ fila: a.fila, mensaje: a.mensaje } as any)),
-    errores_por_fila: erroresConsolidados.map(e => ({ fila: e.fila, mensaje: e.mensaje } as any)),
+    advertencias_por_fila: advertenciasAgrupadas,
+    errores_por_fila: erroresAgrupados.map((e) => ({
+      fila: e.filas,
+      mensaje: e.mensaje,
+    })) as any,
     equipos_rechazados: params.equiposRechazadosArr,
   };
 }
