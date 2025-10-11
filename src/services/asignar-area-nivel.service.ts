@@ -1,7 +1,5 @@
-// src/services/asignar-area-nivel.service.ts
-import { PrismaClient, Rol, Prisma } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "../config/database";
+import { Rol, Prisma } from "@prisma/client";
 
 async function registrarLog(
     tx: Prisma.TransactionClient,
