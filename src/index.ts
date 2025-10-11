@@ -38,7 +38,7 @@ app.use('/api/evaluadores', evaluadorRoutes);
 app.use('/api/inscripciones', importarCSVRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/niveles', niveleRoutes);
-app.use('/api/asignaciones', niveleRoutes);
+app.use('/api/asignaciones', asingarAreaNivelRoutes);
 
 // Health Check
 app.get('/', async (req, res) => {
