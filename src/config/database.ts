@@ -1,19 +1,24 @@
-// src/config/database.ts
 import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-// (Opcional) Conectar para verificar al inicio
-async function connectDB() {
-  try {
-    await prisma.$connect();
-    console.log('✅ Conexión a la base de datos exitosa');
-  } catch (error) {
-    console.error('❌ Error de conexión a la base de datos:', error);
-    process.exit(1);
-  }
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ['query', 'warn', 'error'],
+  });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }
 
-connectDB();
+(async () => {
+  try {
+    await prisma.$connect();
+    console.log('✅ Conexión establecida con la base de datos');
+  } catch (error) {
+    console.error('❌ Error al conectar Prisma:', error);
+  }
+})();
 
 export default prisma;
