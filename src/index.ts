@@ -15,7 +15,7 @@ import evaluadorRoutes from './routes/evaluador.routes';
 import asingarAreaNivelRoutes from './routes/asignar-area-nivel.routes';
 
 // 🆕 Importar nueva ruta HU-04 (Gestión de inscritos)
-//import inscritosRoutes from './routes/inscritos.routes';
+import inscritosRoutes from './routes/inscritos.routes';
 
 // 🧱 Middlewares
 import { manejoErrores } from './middlewares/manejo-errores';
@@ -52,7 +52,7 @@ app.use('/api/niveles', niveleRoutes);
 app.use('/api/asignaciones', asingarAreaNivelRoutes);
 
 // 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
-//app.use('/api', inscritosRoutes);
+app.use('/api', inscritosRoutes);
 
 // ============================
 // Health Check
