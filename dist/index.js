@@ -10,34 +10,46 @@ const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const database_1 = __importDefault(require("./config/database"));
 const express_fileupload_1 = __importDefault(require("express-fileupload"));
+// 🧩 Importar rutas existentes
 const areaRoutes_1 = __importDefault(require("./routes/areaRoutes"));
 const nivelRoutes_1 = __importDefault(require("./routes/nivelRoutes"));
 const importarCSV_routes_1 = __importDefault(require("./routes/importarCSV.routes"));
-const evaluador_routes_1 = __importDefault(require("./routes/evaluador.routes")); // 👈 Importamos tus rutas
+const evaluador_routes_1 = __importDefault(require("./routes/evaluador.routes"));
+const asignar_area_nivel_routes_1 = __importDefault(require("./routes/asignar-area-nivel.routes"));
+// 🆕 Importar nueva ruta HU-04 (Gestión de inscritos)
+const inscritos_routes_1 = __importDefault(require("./routes/inscritos.routes"));
+// 🧱 Middlewares
+const manejo_errores_1 = require("./middlewares/manejo-errores");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
-// Body parsers
+// ============================
+// Configuración general
+// ============================
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
-// File upload (multipart/form-data)
 app.use((0, express_fileupload_1.default)({
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     abortOnLimit: true,
-    useTempFiles: false
+    useTempFiles: false,
 }));
-// Middlewares
 app.use((0, cors_1.default)());
 app.use((0, helmet_1.default)());
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
-// ✅ Registrar tus rutas
+// ============================
+// Registro de rutas principales
+// ============================
 app.use('/api/evaluadores', evaluador_routes_1.default);
 app.use('/api/inscripciones', importarCSV_routes_1.default);
 app.use('/api/areas', areaRoutes_1.default);
 app.use('/api/niveles', nivelRoutes_1.default);
-app.use('/api/asignar', nivelRoutes_1.default);
+app.use('/api/asignaciones', asignar_area_nivel_routes_1.default);
+// 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
+app.use('/api', inscritos_routes_1.default);
+// ============================
 // Health Check
+// ============================
 app.get('/', async (req, res) => {
     try {
         await database_1.default.$queryRaw `SELECT 1`;
@@ -47,7 +59,13 @@ app.get('/', async (req, res) => {
         res.status(500).json({ status: 'error', db: 'not connected' });
     }
 });
+// ============================
+// Middleware global de manejo de errores
+// ============================
+app.use(manejo_errores_1.manejoErrores);
+// ============================
 // Iniciar servidor
+// ============================
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });

@@ -1,46 +1,62 @@
 // src/index.ts
+import "dotenv/config";
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import prisma from './config/database';
 import fileUpload from 'express-fileupload';
+
+// 🧩 Importar rutas existentes
 import areaRoutes from './routes/areaRoutes';
 import niveleRoutes from './routes/nivelRoutes';
 import importarCSVRoutes from './routes/importarCSV.routes';
+import evaluadorRoutes from './routes/evaluador.routes';
+import asingarAreaNivelRoutes from './routes/asignar-area-nivel.routes';
+
+// 🆕 Importar nueva ruta HU-04 (Gestión de inscritos)
+import inscritosRoutes from './routes/inscritos.routes';
+
+// 🧱 Middlewares
 import { manejoErrores } from './middlewares/manejo-errores';
-import evaluadorRoutes from './routes/evaluador.routes'; // 👈 Importamos tus rutas
-import asingarAreaNivelRoutes from './routes/asignar-area-nivel.routes'; 
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Body parsers
+// ============================
+// Configuración general
+// ============================
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// File upload (multipart/form-data)
 app.use(fileUpload({
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   abortOnLimit: true,
-  useTempFiles: false
+  useTempFiles: false,
 }));
-// Middlewares
+
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ Registrar tus rutas
+// ============================
+// Registro de rutas principales
+// ============================
 app.use('/api/evaluadores', evaluadorRoutes);
 app.use('/api/inscripciones', importarCSVRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/niveles', niveleRoutes);
 app.use('/api/asignaciones', asingarAreaNivelRoutes);
 
+// 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
+app.use('/api', inscritosRoutes);
+
+// ============================
 // Health Check
+// ============================
 app.get('/', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -50,8 +66,14 @@ app.get('/', async (req, res) => {
   }
 });
 
+// ============================
+// Middleware global de manejo de errores
+// ============================
+app.use(manejoErrores);
 
+// ============================
 // Iniciar servidor
+// ============================
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
