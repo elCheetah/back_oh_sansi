@@ -6,15 +6,10 @@ function nombreCompleto(u: any) {
   return [u.nombre, u.ap_paterno, u.ap_materno ?? ""].filter(Boolean).join(" ").trim();
 }
 
-/**
- * Reglas:
- * - Mensaje único para credenciales erróneas: "Credenciales inválidas."
- * - Usuario inactivo: "Usuario sin acceso."
- */
+/** Regla: 401 "Credenciales inválidas." (no se revela si correo o contraseña falló). 403 inactivo. */
 export async function loginService(correo: string, contrasena: string) {
   const user = await prisma.usuarios.findUnique({ where: { correo } });
   if (!user) return { status: 401, err: "Credenciales inválidas." } as const;
-
   if (!user.estado) return { status: 403, err: "Usuario sin acceso." } as const;
 
   const ok = await bcrypt.compare(contrasena, user.contrasena_hash);
@@ -47,10 +42,7 @@ export async function loginService(correo: string, contrasena: string) {
   } as const;
 }
 
-/**
- * Logout: registra revocación en Logs (lista negra por jti) sin tocar Prisma.
- *   entidad="auth", campo="logout", valor_nuevo=jti, usuario_id=id del usuario
- */
+/** Logout: registra revocación (lista negra por jti) en Logs, sin tocar Prisma. */
 export async function logoutService(jti: string, usuario_id: number) {
   await prisma.logs.create({
     data: {
