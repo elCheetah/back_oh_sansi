@@ -8,6 +8,7 @@ import prisma from "./config/database";
 import fileUpload from "express-fileupload";
 
 // 🧩 Importar rutas existentes
+import authRoutes from "./routes/auth.routes";
 import areaRoutes from "./routes/areaRoutes";
 import niveleRoutes from "./routes/nivelRoutes";
 import importarCSVRoutes from "./routes/importarCSV.routes";
@@ -50,6 +51,7 @@ app.use(express.urlencoded({ extended: true }));
 // ============================
 // Registro de rutas principales
 // ============================
+app.use("/api/auth", authRoutes);
 app.use("/api/evaluadores", evaluadorRoutes);
 app.use("/api/inscripciones", importarCSVRoutes);
 app.use("/api/areas", areaRoutes);
