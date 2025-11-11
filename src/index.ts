@@ -20,7 +20,7 @@ import inscritosRoutes from "./routes/inscritos.routes";
 
 // 🆕 Importar nueva ruta HU-Fases
 import fasesRoutes from "./routes/fases.routes";
-
+import premiadosRoutes from './routes/premiados.routes';
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
 
@@ -64,6 +64,7 @@ app.use("/api", inscritosRoutes);
 // 🆕 Nueva ruta HU-Fases: gestión de estados de fases
 app.use("/api", fasesRoutes);
 
+app.use('/api', premiadosRoutes);
 // ============================
 // Health Check
 // ============================
