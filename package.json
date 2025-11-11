@@ -28,14 +28,14 @@
     "bcryptjs": "3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "exceljs": "4.4.0",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "express-fileupload": "^1.5.2",
     "googleapis": "^161.0.0",
     "helmet": "^8.1.0",
     "jsonwebtoken": "9.0.2",
     "nodemailer": "^7.0.6",
-    "pdfkit": "0.17.2",
+    "pdfkit": "^0.17.2",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
