@@ -15,11 +15,10 @@ import importarCSVRoutes from "./routes/importarCSV.routes";
 import evaluadorRoutes from "./routes/evaluador.routes";
 import asingarAreaNivelRoutes from "./routes/asignar-area-nivel.routes";
 
-// 🆕 Importar nueva ruta HU-04 (Gestión de inscritos)
-import inscritosRoutes from "./routes/inscritos.routes";
-
-// 🆕 Importar nueva ruta HU-Fases
-import fasesRoutes from "./routes/fases.routes";
+// 🆕 Importar nuevas rutas
+import inscritosRoutes from "./routes/inscritos.routes"; // HU-04
+import fasesRoutes from "./routes/fases.routes"; // HU-Fases
+import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
 
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
@@ -63,6 +62,15 @@ app.use("/api", inscritosRoutes);
 
 // 🆕 Nueva ruta HU-Fases: gestión de estados de fases
 app.use("/api", fasesRoutes);
+
+// ✅ SIMULADOR TEMPORAL DE ADMIN (solo para pruebas locales)
+app.use((req, _res, next) => {
+  (req as any).usuario = { id: 1, rol: "ADMINISTRADOR" };
+  next();
+});
+
+// 🆕 Nueva ruta HU-08: Gestión de premiados
+app.use("/api", premiadosRoutes);
 
 // ============================
 // Health Check
