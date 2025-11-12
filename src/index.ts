@@ -19,7 +19,7 @@ import asingarAreaNivelRoutes from "./routes/asignar-area-nivel.routes";
 import inscritosRoutes from "./routes/inscritos.routes"; // HU-04
 import fasesRoutes from "./routes/fases.routes"; // HU-Fases
 import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
-
+import medalleroRoutes from "./routes/medallero.routes";
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
 
@@ -71,6 +71,8 @@ app.use((req, _res, next) => {
 
 // 🆕 Nueva ruta HU-08: Gestión de premiados
 app.use("/api", premiadosRoutes);
+
+app.use("/api", medalleroRoutes); 
 
 // ============================
 // Health Check
