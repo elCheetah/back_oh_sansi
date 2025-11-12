@@ -19,6 +19,7 @@ import asingarAreaNivelRoutes from "./routes/asignar-area-nivel.routes";
 import inscritosRoutes from "./routes/inscritos.routes"; // HU-04
 import fasesRoutes from "./routes/fases.routes"; // HU-Fases
 import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
+import recuperarPass from "./routes/recuperarPass.routes";
 
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
@@ -56,6 +57,7 @@ app.use("/api/inscripciones", importarCSVRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/niveles", niveleRoutes);
 app.use("/api/asignaciones", asingarAreaNivelRoutes);
+app.use("/api/recuperarPass", recuperarPass);
 
 // 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
 app.use("/api", inscritosRoutes);
