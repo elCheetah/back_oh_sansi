@@ -21,6 +21,7 @@ import fasesRoutes from "./routes/fases.routes"; // HU-Fases
 import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
 import recuperarPass from "./routes/recuperarPass.routes";
 
+import evaluacionRoutes from './routes/evaluaciones.routes';
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
 
@@ -59,6 +60,8 @@ app.use("/api/niveles", niveleRoutes);
 app.use("/api/asignaciones", asingarAreaNivelRoutes);
 app.use("/api/recuperarPass", recuperarPass);
 
+app.use('/api/evaluaciones', evaluacionRoutes); 
+
 // 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
 app.use("/api", inscritosRoutes);
 
@@ -70,6 +73,8 @@ app.use((req, _res, next) => {
   (req as any).usuario = { id: 1, rol: "ADMINISTRADOR" };
   next();
 });
+
+
 
 // 🆕 Nueva ruta HU-08: Gestión de premiados
 app.use("/api", premiadosRoutes);
