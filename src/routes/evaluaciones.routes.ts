@@ -1,17 +1,20 @@
-// src/routes/evaluaciones.routes.ts
-
 import { Router } from 'express';
-import { listarParticipacionesParaCalificar, registrarEvaluacion } from '../controllers/evaluacion.controller';
+// Importamos las nuevas funciones de listado separado
+import { listarIndividuales, listarEquipos, registrarEvaluacion } from '../controllers/evaluacion.controller';
 import { validarRegistroEvaluacion } from '../middlewares/evaluacion';
 
 const router = Router();
 
-// Ruta para obtener la lista de participaciones que el evaluador puede calificar
-// Ejemplo: GET /api/evaluaciones/participaciones?areaId=1&nivelId=3&faseId=1
-router.get('/participaciones', listarParticipacionesParaCalificar);
+// 1. Ruta para obtener la lista de participantes INDIVIDUALES (Vista 1)
+// Endpoint: /api/evaluaciones/individuales?evaluadorId=X&faseId=Y
+router.get('/individuales', listarIndividuales);
 
-// Ruta para registrar la nota y comentarios de una participación específica
-// Ejemplo: POST /api/evaluaciones/registro
+// 2. Ruta para obtener la lista de participantes por EQUIPO (Vista 2)
+// Endpoint: /api/evaluaciones/equipos?evaluadorId=X&faseId=Y
+router.get('/equipos', listarEquipos);
+
+// 3. Ruta de registro (Mantenida UNIFICADA)
+// Endpoint: /api/evaluaciones/registro
 router.post('/registro', validarRegistroEvaluacion, registrarEvaluacion);
 
 export default router;
