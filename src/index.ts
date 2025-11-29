@@ -23,6 +23,7 @@ import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
 import medalleroRoutes from "./routes/medallero.routes";
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
+import gestionEvaluadorRoutes from "./routes/gestionEvaluador.routes";
 
 dotenv.config();
 
@@ -75,7 +76,7 @@ app.use((req, _res, next) => {
 app.use("/api", premiadosRoutes);
 
 app.use("/api", medalleroRoutes); 
-
+app.use("/api", gestionEvaluadorRoutes);
 // ============================
 // Health Check
 // ============================
