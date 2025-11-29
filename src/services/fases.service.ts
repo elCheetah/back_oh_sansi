@@ -1,42 +1,92 @@
-import { EstadoFase } from "@prisma/client";
+import { EstadoFase, TipoFase } from "@prisma/client";
 import prisma from "../config/database";
 
 const FASE_CLASIF = "Clasificación";
 const FASE_FINAL = "Final";
 
-/** Asegura que existan ambas fases en BD */
+// ⚠️ Ajusta esto según tu realidad (p.ej. 2024, 2025 o desde env)
+const GESTION_ACTUAL = 2025;
+
+/** Asegura que existan ambas fases en BD para la gestión actual */
 async function ensureFases() {
-  const fases = await prisma.fases.findMany();
-  const nombres = fases.map(f => f.nombre);
+  const fases = await prisma.fases.findMany({
+    where: { gestion: GESTION_ACTUAL },
+  });
+  const nombres = fases.map((f) => f.nombre);
 
   if (!nombres.includes(FASE_CLASIF)) {
-    await prisma.fases.create({ data: { nombre: FASE_CLASIF, estado: "PENDIENTE" } });
+    await prisma.fases.create({
+      data: {
+        nombre: FASE_CLASIF,
+        gestion: GESTION_ACTUAL,
+        estado: EstadoFase.PENDIENTE,
+        tipo: TipoFase.CLASIFICATORIA,
+      },
+    });
   }
+
   if (!nombres.includes(FASE_FINAL)) {
-    await prisma.fases.create({ data: { nombre: FASE_FINAL, estado: "PENDIENTE" } });
+    await prisma.fases.create({
+      data: {
+        nombre: FASE_FINAL,
+        gestion: GESTION_ACTUAL,
+        estado: EstadoFase.PENDIENTE,
+        tipo: TipoFase.FINAL,
+      },
+    });
   }
 }
 
+type Snapshot = {
+  clasif: { id: number; estado: EstadoFase };
+  final: { id: number; estado: EstadoFase };
+};
+
 /** Lee estados actuales de ambas fases */
-async function getSnapshot() {
+async function getSnapshot(): Promise<Snapshot> {
   await ensureFases();
-  const clasif = await prisma.fases.findUnique({
-    where: { nombre: FASE_CLASIF },
+
+  const clasif = await prisma.fases.findFirst({
+    where: { nombre: FASE_CLASIF, gestion: GESTION_ACTUAL },
     select: { id: true, estado: true },
   });
-  const final = await prisma.fases.findUnique({
-    where: { nombre: FASE_FINAL },
+
+  const final = await prisma.fases.findFirst({
+    where: { nombre: FASE_FINAL, gestion: GESTION_ACTUAL },
     select: { id: true, estado: true },
   });
-  return { clasif: clasif!, final: final! };
+
+  if (!clasif || !final) {
+    throw new Error(
+      "No se encontraron las fases configuradas para la gestión actual."
+    );
+  }
+
+  return { clasif, final };
 }
 
 /** Mapea estados a un estado general tipo “radio” */
-function snapshotToRadio(s: { clasif: any; final: any }) {
-  if (s.clasif.estado === "PENDIENTE" && s.final.estado === "PENDIENTE") return "NO_INICIADA";
-  if (s.clasif.estado === "EN_EJECUCION") return "CLASIFICACION";
-  if (s.clasif.estado === "FINALIZADA" && s.final.estado === "EN_EJECUCION") return "FINAL";
-  if (s.clasif.estado === "FINALIZADA" && s.final.estado === "FINALIZADA") return "CONCLUIDA";
+function snapshotToRadio(s: Snapshot) {
+  if (
+    s.clasif.estado === EstadoFase.PENDIENTE &&
+    s.final.estado === EstadoFase.PENDIENTE
+  )
+    return "NO_INICIADA";
+
+  if (s.clasif.estado === EstadoFase.EN_EJECUCION) return "CLASIFICACION";
+
+  if (
+    s.clasif.estado === EstadoFase.FINALIZADA &&
+    s.final.estado === EstadoFase.EN_EJECUCION
+  )
+    return "FINAL";
+
+  if (
+    s.clasif.estado === EstadoFase.FINALIZADA &&
+    s.final.estado === EstadoFase.FINALIZADA
+  )
+    return "CONCLUIDA";
+
   return "NO_INICIADA";
 }
 
@@ -74,26 +124,37 @@ async function logFase(accion: string, fase: string, admin: string) {
       entidad: "FASES",
       campo: accion,
       valor_nuevo: fase,
-      usuario_id: 1, // reemplazar por id admin real
+      usuario_id: 1, // TODO: reemplazar por id admin real
       motivo: admin,
     },
   });
 }
 
 /** Abrir fase */
-export async function abrirFaseSrv(admin: string, fase?: "CLASIFICACION" | "FINAL") {
+export async function abrirFaseSrv(
+  admin: string,
+  fase?: "CLASIFICACION" | "FINAL"
+) {
   const s = await getSnapshot();
 
   if (fase === "FINAL") {
-    if (s.clasif.estado !== "FINALIZADA") throw new Error("Debe finalizar la fase de Clasificación primero.");
+    if (s.clasif.estado !== EstadoFase.FINALIZADA) {
+      throw new Error("Debe finalizar la fase de Clasificación primero.");
+    }
 
-    await prisma.fases.update({ where: { id: s.final.id }, data: { estado: "EN_EJECUCION" } });
+    await prisma.fases.update({
+      where: { id: s.final.id },
+      data: { estado: EstadoFase.EN_EJECUCION },
+    });
     await logFase("ABRIR", "FINAL", admin);
     return getEstadoActualSrv();
   }
 
-  if (s.clasif.estado === "PENDIENTE") {
-    await prisma.fases.update({ where: { id: s.clasif.id }, data: { estado: "EN_EJECUCION" } });
+  if (s.clasif.estado === EstadoFase.PENDIENTE) {
+    await prisma.fases.update({
+      where: { id: s.clasif.id },
+      data: { estado: EstadoFase.EN_EJECUCION },
+    });
     await logFase("ABRIR", "CLASIFICACION", admin);
   }
 
@@ -104,11 +165,17 @@ export async function abrirFaseSrv(admin: string, fase?: "CLASIFICACION" | "FINA
 export async function cerrarFaseSrv(admin: string) {
   const s = await getSnapshot();
 
-  if (s.clasif.estado === "EN_EJECUCION") {
-    await prisma.fases.update({ where: { id: s.clasif.id }, data: { estado: "FINALIZADA" } });
+  if (s.clasif.estado === EstadoFase.EN_EJECUCION) {
+    await prisma.fases.update({
+      where: { id: s.clasif.id },
+      data: { estado: EstadoFase.FINALIZADA },
+    });
     await logFase("CERRAR", "CLASIFICACION", admin);
-  } else if (s.final.estado === "EN_EJECUCION") {
-    await prisma.fases.update({ where: { id: s.final.id }, data: { estado: "FINALIZADA" } });
+  } else if (s.final.estado === EstadoFase.EN_EJECUCION) {
+    await prisma.fases.update({
+      where: { id: s.final.id },
+      data: { estado: EstadoFase.FINALIZADA },
+    });
     await logFase("CERRAR", "FINAL", admin);
   } else {
     throw new Error("No se puede cerrar en el estado actual.");
@@ -121,7 +188,9 @@ export async function cerrarFaseSrv(admin: string) {
 export async function publicarResultadosSrv(admin: string) {
   const s = await getSnapshot();
   const radio = snapshotToRadio(s);
-  if (radio !== "FINAL") throw new Error("Solo se pueden publicar resultados en Fase final.");
+  if (radio !== "FINAL") {
+    throw new Error("Solo se pueden publicar resultados en Fase final.");
+  }
 
   await logFase("PUBLICAR", "FINAL", admin);
   return getEstadoActualSrv();
@@ -132,10 +201,16 @@ export async function listarHistorialSrv() {
   const logs = await prisma.logs.findMany({
     where: { entidad: "FASES" },
     orderBy: { id: "desc" },
-    select: { id: true, campo: true, valor_nuevo: true, motivo: true, fecha_cambio: true },
+    select: {
+      id: true,
+      campo: true,
+      valor_nuevo: true,
+      motivo: true,
+      fecha_cambio: true,
+    },
   });
 
-  return logs.map(l => ({
+  return logs.map((l) => ({
     id: l.id,
     accion: l.campo,
     fase: l.valor_nuevo,
