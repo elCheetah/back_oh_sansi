@@ -24,6 +24,7 @@ import medalleroRoutes from "./routes/medallero.routes";
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
 import gestionEvaluadorRoutes from "./routes/gestionEvaluador.routes";
+import parametrizacionMedallasRoutes from "./routes/parametrizacionMedallas.routes";
 
 dotenv.config();
 

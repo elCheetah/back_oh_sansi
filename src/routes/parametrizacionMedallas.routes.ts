@@ -4,23 +4,21 @@ import {
   obtenerTablaParametrizacionMedallas,
   guardarParametrizacionMedallas,
   eliminarParametrizacionMedallas,
-} from "../controllers/parametrizacionMedallasController";
+} from "../controllers/parametrizacionMedallas.controller";
 import { validarGuardarConfigMedallas } from "../middlewares/validarConfigMedallas";
-// import { requireAuth } from "../middlewares/requireAuth";
+
 
 const router = Router();
 
 // Tabla completa para el front
 router.get(
   "/",
-  // requireAuth,
   obtenerTablaParametrizacionMedallas
 );
 
 // Guardar (crear/actualizar) una fila de configuración
 router.put(
   "/:areaId/:nivelId",
-  // requireAuth,
   validarGuardarConfigMedallas,
   guardarParametrizacionMedallas
 );
@@ -28,7 +26,6 @@ router.put(
 // Limpiar configuración de un área+nivel
 router.delete(
   "/:areaId/:nivelId",
-  // requireAuth,
   eliminarParametrizacionMedallas
 );
 

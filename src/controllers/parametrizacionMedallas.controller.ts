@@ -4,7 +4,7 @@ import {
   listarParametrizacionMedallas,
   guardarConfigMedallas,
   eliminarConfigMedallas,
-} from "../services/parametrizacionMedallasService";
+} from "../services/parametrizacionMedallas.service";
 
 /**
  * GET /api/parametrizacion-medallas
