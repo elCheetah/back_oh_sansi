@@ -38,7 +38,7 @@ export async function registrarEvaluador(dto: RegistroEvaluadorDTO) {
       telefono: dto.telefono ?? null,
       contrasena_hash: hash,
       rol: 'EVALUADOR',
-      estado: true,
+      estado: false,
     },
   });
 

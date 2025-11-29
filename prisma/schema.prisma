@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  directUrl      = env("DATABASE_URL")
 }
 
 /**
@@ -29,7 +29,6 @@ model Areas {
   @@map("areas")
 }
 
-
 model Niveles {
   id          Int     @id @default(autoincrement())
   codigo      String? @db.VarChar(50)
@@ -45,7 +44,6 @@ model Niveles {
   @@unique([codigo])
   @@map("niveles")
 }
-
 
 model Asignaciones {
   id         Int      @id @default(autoincrement())
@@ -101,12 +99,20 @@ model Fases {
   estado      EstadoFase @default(PENDIENTE)
   creado_en   DateTime   @default(now())
 
+  gestion Int
+
+  tipo TipoFase @default(CLASIFICATORIA)
+
   evaluaciones Evaluaciones[]
 
-  @@unique([nombre])
+  @@unique([nombre, gestion])
   @@map("fases")
 }
 
+enum TipoFase {
+  CLASIFICATORIA
+  FINAL
+}
 
 enum TipoDocumento {
   CI
@@ -174,24 +180,24 @@ model Tutores {
 }
 
 model Olimpistas {
-  id               Int           @id @default(autoincrement())
-  nombre           String        @db.VarChar(100)
-  ap_paterno       String        @db.VarChar(100)
-  ap_materno       String?       @db.VarChar(100)
+  id               Int              @id @default(autoincrement())
+  nombre           String           @db.VarChar(100)
+  ap_paterno       String           @db.VarChar(100)
+  ap_materno       String?          @db.VarChar(100)
   tipo_documento   TipoDocumento
-  numero_documento String        @db.VarChar(20)
-  unidad_educativa String        @db.VarChar(150)
-  departamento     String        @db.VarChar(100)
-  grado            String?       @db.VarChar(50)
+  numero_documento String           @db.VarChar(20)
+  unidad_educativa String           @db.VarChar(150)
+  departamento     String           @db.VarChar(100)
+  grado            String?          @db.VarChar(50)
   fecha_nacimiento DateTime?
   sexo             Sexo?
-  activo           Boolean       @default(true)
-  creado_en        DateTime      @default(now())
-  correo           String        @unique @db.VarChar(150)
-  tutor_id        Int?
-  tutor           Tutores?         @relation(fields: [tutor_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  participacion   Participacion[]
-  miembros_equipo MiembrosEquipo[]
+  activo           Boolean          @default(true)
+  creado_en        DateTime         @default(now())
+  correo           String           @unique @db.VarChar(150)
+  tutor_id         Int?
+  tutor            Tutores?         @relation(fields: [tutor_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  participacion    Participacion[]
+  miembros_equipo  MiembrosEquipo[]
 
   @@unique([tipo_documento, numero_documento])
   @@map("olimpistas")
@@ -214,7 +220,6 @@ model Equipos {
   @@map("equipos")
 }
 
-
 model MiembrosEquipo {
   id            Int       @id @default(autoincrement())
   olimpista_id  Int
@@ -229,7 +234,6 @@ model MiembrosEquipo {
   @@index([equipo_id])
   @@map("miembros_equipo")
 }
-
 
 enum EstadoParticipacion {
   CLASIFICADO
@@ -267,7 +271,6 @@ model Participacion {
   @@index([nivel_id])
   @@map("participacion")
 }
-
 
 model Evaluaciones {
   id                  Int       @id @default(autoincrement())
