@@ -1,3 +1,4 @@
+// src/controllers/inscritos.controller.ts
 import { Request, Response } from "express";
 import { listarInscritosSrv } from "../services/inscritos.service";
 import {
@@ -28,4 +29,3 @@ export const InscritosController = {
     return res.send(buffer);
   },
 };
-

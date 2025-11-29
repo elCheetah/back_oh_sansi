@@ -17,11 +17,10 @@ import asingarAreaNivelRoutes from "./routes/asignar-area-nivel.routes";
 
 // 🆕 Importar nuevas rutas
 import inscritosRoutes from "./routes/inscritos.routes"; // HU-04
+import equiposRoutes from "./routes/equipos.routes";
 import fasesRoutes from "./routes/fases.routes"; // HU-Fases
 import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
-import recuperarPass from "./routes/recuperarPass.routes";
-
-import evaluacionRoutes from './routes/evaluaciones.routes';
+import medalleroRoutes from "./routes/medallero.routes";
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
 
@@ -58,26 +57,24 @@ app.use("/api/inscripciones", importarCSVRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/niveles", niveleRoutes);
 app.use("/api/asignaciones", asingarAreaNivelRoutes);
-app.use("/api/recuperarPass", recuperarPass);
-
-app.use('/api/evaluaciones', evaluacionRoutes); 
 
 // 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
 app.use("/api", inscritosRoutes);
+app.use("/api", equiposRoutes);
 
 // 🆕 Nueva ruta HU-Fases: gestión de estados de fases
 app.use("/api", fasesRoutes);
 
-// ✅ SIMULADOR TEMPORAL DE ADMIN (solo para pruebas locales)
+// SIMULADOR TEMPORAL DE ADMIN (solo para pruebas locales)
 app.use((req, _res, next) => {
   (req as any).usuario = { id: 1, rol: "ADMINISTRADOR" };
   next();
 });
 
 
-
-// 🆕 Nueva ruta HU-08: Gestión de premiados
 app.use("/api", premiadosRoutes);
+
+app.use("/api", medalleroRoutes); 
 
 // ============================
 // Health Check

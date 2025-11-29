@@ -1,56 +1,70 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import {
+  PrismaClient,
+  Prisma,
+  TipoParticipacion,
+} from "@prisma/client";
 import { InscritoDTO } from "../types/inscritos.types";
+
+const prisma = new PrismaClient();
 
 type ListFiltros = {
   search?: string;
   area?: string;
   nivel?: string;
   estado?: "CLASIFICADO" | "NO_CLASIFICADO" | "DESCALIFICADO";
-  tipo?: "INDIVIDUAL" | "EQUIPO";
+  tipo?: "INDIVIDUAL" | "EQUIPO"; // INDIVIDUAL o EQUIPO
   page?: number;
   pageSize?: number;
 };
 
 export async function listarInscritosSrv(f: ListFiltros) {
-  // ✅ Creamos un PrismaClient nuevo por request (aisla el prepared statement)
-  const prisma = new PrismaClient();
+  const page = Math.max(1, Number(f.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Number(f.pageSize ?? 20)));
 
-  try {
-    const page = Math.max(1, Number(f.page ?? 1));
-    const pageSize = Math.min(100, Math.max(1, Number(f.pageSize ?? 20)));
+  const where: Prisma.ParticipacionWhereInput = {
+    ...(f.estado && { estado: f.estado }),
 
-    // 🎯 Filtros dinámicos
-    const where: Prisma.ParticipacionWhereInput = {
-      ...(f.estado && { estado: f.estado }),
-      ...(f.tipo && { tipo: f.tipo }),
-      ...(f.area && { area: { nombre: { equals: f.area, mode: "insensitive" } } }),
-      ...(f.nivel && { nivel: { nombre: { equals: f.nivel, mode: "insensitive" } } }),
-      OR: f.search
-        ? [
-            {
-              olimpista: {
-                OR: [
-                  { nombre: { contains: f.search, mode: "insensitive" } },
-                  { ap_paterno: { contains: f.search, mode: "insensitive" } },
-                  { ap_materno: { contains: f.search, mode: "insensitive" } },
-                  { numero_documento: { contains: f.search } },
-                ],
-              },
+    // 🔹 Filtro por tipo: INDIVIDUAL o EQUIPO
+    ...(f.tipo === "INDIVIDUAL" && {
+      tipo: TipoParticipacion.INDIVIDUAL,
+      olimpista_id: { not: null },
+    }),
+    ...(f.tipo === "EQUIPO" && {
+      tipo: TipoParticipacion.EQUIPO,
+      equipo_id: { not: null },
+    }),
+
+    ...(f.area && {
+      area: { nombre: { equals: f.area, mode: "insensitive" } },
+    }),
+    ...(f.nivel && {
+      nivel: { nombre: { equals: f.nivel, mode: "insensitive" } },
+    }),
+
+    OR: f.search
+      ? [
+          {
+            olimpista: {
+              OR: [
+                { nombre: { contains: f.search, mode: "insensitive" } },
+                { ap_paterno: { contains: f.search, mode: "insensitive" } },
+                { ap_materno: { contains: f.search, mode: "insensitive" } },
+                { numero_documento: { contains: f.search } },
+              ],
             },
-            { equipo: { nombre: { contains: f.search, mode: "insensitive" } } },
-          ]
-        : undefined,
-    };
+          },
+          {
+            equipo: {
+              nombre: { contains: f.search, mode: "insensitive" },
+            },
+          },
+        ]
+      : undefined,
+  };
 
-    // ✅ Conteo manual (sin count)
-    const totalRows = await new PrismaClient().participacion.findMany({
-      where,
-      select: { id: true },
-    });
-    const total = totalRows.length;
-
-    // ✅ Consulta principal
-    const rows = await prisma.participacion.findMany({
+  const [total, rows] = await prisma.$transaction([
+    prisma.participacion.count({ where }),
+    prisma.participacion.findMany({
       where,
       include: {
         area: { select: { id: true, nombre: true } },
@@ -74,15 +88,35 @@ export async function listarInscritosSrv(f: ListFiltros) {
             },
           },
         },
-        equipo: { select: { id: true, nombre: true } },
+        equipo: {
+          select: {
+            id: true,
+            nombre: true,
+            miembros: {
+              take: 1,
+              include: {
+                olimpista: {
+                  select: {
+                    unidad_educativa: true,
+                    departamento: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       orderBy: { id: "asc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
-    });
+    }),
+  ]);
 
-    // ✅ DTO limpio
-    const data = rows.map<InscritoDTO>((p) => ({
+  const data = rows.map<InscritoDTO>((p): InscritoDTO => {
+    const tutor = p.olimpista?.tutor ?? null;
+    const primerMiembro = p.equipo?.miembros[0]?.olimpista;
+
+    return {
       idParticipacion: p.id,
       modalidad: p.tipo,
       estado: p.estado,
@@ -103,28 +137,28 @@ export async function listarInscritosSrv(f: ListFiltros) {
             departamento: p.olimpista.departamento,
           }
         : undefined,
-      tutorLegal: p.olimpista?.tutor
+      tutorLegal: tutor
         ? {
-            id: p.olimpista.tutor.id,
+            id: tutor.id,
             nombreCompleto: [
-              p.olimpista.tutor.nombre,
-              p.olimpista.tutor.ap_paterno,
-              p.olimpista.tutor.ap_materno ?? "",
+              tutor.nombre,
+              tutor.ap_paterno,
+              tutor.ap_materno ?? "",
             ]
               .join(" ")
               .trim(),
           }
         : null,
-      equipo: p.equipo ? { id: p.equipo.id, nombre: p.equipo.nombre } : null,
-    }));
+      equipo: p.equipo
+        ? {
+            id: p.equipo.id,
+            nombre: p.equipo.nombre,
+            unidadEducativa: primerMiembro?.unidad_educativa,
+            departamento: primerMiembro?.departamento,
+          }
+        : null,
+    };
+  });
 
-    return { total, page, pageSize, data };
-  } catch (error) {
-    console.error("❌ Error en listarInscritosSrv:", error);
-    throw error;
-  } finally {
-    // ✅ Cerramos la conexión para evitar prepared statements persistentes
-    await prisma.$disconnect();
-  }
+  return { total, page, pageSize, data };
 }
-

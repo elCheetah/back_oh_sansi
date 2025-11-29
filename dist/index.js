@@ -18,10 +18,12 @@ const nivelRoutes_1 = __importDefault(require("./routes/nivelRoutes"));
 const importarCSV_routes_1 = __importDefault(require("./routes/importarCSV.routes"));
 const evaluador_routes_1 = __importDefault(require("./routes/evaluador.routes"));
 const asignar_area_nivel_routes_1 = __importDefault(require("./routes/asignar-area-nivel.routes"));
-// 🆕 Importar nueva ruta HU-04 (Gestión de inscritos)
-const inscritos_routes_1 = __importDefault(require("./routes/inscritos.routes"));
-// 🆕 Importar nueva ruta HU-Fases
-const fases_routes_1 = __importDefault(require("./routes/fases.routes"));
+// 🆕 Importar nuevas rutas
+const inscritos_routes_1 = __importDefault(require("./routes/inscritos.routes")); // HU-04
+const equipos_routes_1 = __importDefault(require("./routes/equipos.routes"));
+const fases_routes_1 = __importDefault(require("./routes/fases.routes")); // HU-Fases
+const premiados_routes_1 = __importDefault(require("./routes/premiados.routes")); // HU-08 (premiados)
+const medallero_routes_1 = __importDefault(require("./routes/medallero.routes"));
 // 🧱 Middlewares
 const manejo_errores_1 = require("./middlewares/manejo-errores");
 dotenv_1.default.config();
@@ -52,8 +54,16 @@ app.use("/api/niveles", nivelRoutes_1.default);
 app.use("/api/asignaciones", asignar_area_nivel_routes_1.default);
 // 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
 app.use("/api", inscritos_routes_1.default);
+app.use("/api", equipos_routes_1.default);
 // 🆕 Nueva ruta HU-Fases: gestión de estados de fases
 app.use("/api", fases_routes_1.default);
+// SIMULADOR TEMPORAL DE ADMIN (solo para pruebas locales)
+app.use((req, _res, next) => {
+    req.usuario = { id: 1, rol: "ADMINISTRADOR" };
+    next();
+});
+app.use("/api", premiados_routes_1.default);
+app.use("/api", medallero_routes_1.default);
 // ============================
 // Health Check
 // ============================
