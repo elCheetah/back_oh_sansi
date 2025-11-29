@@ -26,6 +26,8 @@ const premiados_routes_1 = __importDefault(require("./routes/premiados.routes"))
 const medallero_routes_1 = __importDefault(require("./routes/medallero.routes"));
 // 🧱 Middlewares
 const manejo_errores_1 = require("./middlewares/manejo-errores");
+const gestionEvaluador_routes_1 = __importDefault(require("./routes/gestionEvaluador.routes"));
+const parametrizacionMedallas_routes_1 = __importDefault(require("./routes/parametrizacionMedallas.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +57,7 @@ app.use("/api/asignaciones", asignar_area_nivel_routes_1.default);
 // 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
 app.use("/api", inscritos_routes_1.default);
 app.use("/api", equipos_routes_1.default);
+app.use("/api/parametrizacion-medallas", parametrizacionMedallas_routes_1.default);
 // 🆕 Nueva ruta HU-Fases: gestión de estados de fases
 app.use("/api", fases_routes_1.default);
 // SIMULADOR TEMPORAL DE ADMIN (solo para pruebas locales)
@@ -64,6 +67,7 @@ app.use((req, _res, next) => {
 });
 app.use("/api", premiados_routes_1.default);
 app.use("/api", medallero_routes_1.default);
+app.use("/api", gestionEvaluador_routes_1.default);
 // ============================
 // Health Check
 // ============================

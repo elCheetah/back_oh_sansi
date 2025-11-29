@@ -6,11 +6,11 @@ export type FilaParametrizacionMedallasDTO = {
   areaNombre: string;
   nivelId: number;
   nivelNombre: string;
-  oros: number | null;
-  platas: number | null;
-  bronces: number | null;
-  menciones: number | null;
-  notaMinAprobacion: number | null;
+  oros: number;
+  platas: number;
+  bronces: number;
+  menciones: number;
+  notaMinAprobacion: number;
 };
 
 /**
@@ -33,10 +33,10 @@ export const listarParametrizacionMedallas = async (): Promise<
   // 2) Traer catálogos y configuraciones actuales
   const [areas, niveles, configuraciones] = await Promise.all([
     prisma.areas.findMany({
-      where: { id: { in: areaIds }, estado: true },
+      where: { id: { in: areaIds } }, // sin filtro por estado
     }),
     prisma.niveles.findMany({
-      where: { id: { in: nivelIds }, estado: true },
+      where: { id: { in: nivelIds } }, // sin filtro por estado
     }),
     prisma.configMedallas.findMany({
       where: {
@@ -58,14 +58,16 @@ export const listarParametrizacionMedallas = async (): Promise<
 
     return {
       areaId: combo.area_id,
-      areaNombre: area?.nombre ?? "Área desconocida",
+      areaNombre: area ? area.nombre : `Área ${combo.area_id}`,
       nivelId: combo.nivel_id,
-      nivelNombre: nivel?.nombre ?? "Nivel desconocido",
-      oros: config?.oros ?? null,
-      platas: config?.platas ?? null,
-      bronces: config?.bronces ?? null,
-      menciones: config?.menciones ?? null,
-      notaMinAprobacion: config?.nota_min_aprobacion ?? null,
+      nivelNombre: nivel ? nivel.nombre : `Nivel ${combo.nivel_id}`,
+
+      // Si NO existe config_medallas para esa combinación, devolvemos 0
+      oros: config ? config.oros : 0,
+      platas: config ? config.platas : 0,
+      bronces: config ? config.bronces : 0,
+      menciones: config ? config.menciones : 0,
+      notaMinAprobacion: config ? config.nota_min_aprobacion : 0,
     };
   });
 
