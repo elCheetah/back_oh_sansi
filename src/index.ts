@@ -63,6 +63,8 @@ app.use("/api/asignaciones", asingarAreaNivelRoutes);
 app.use("/api", inscritosRoutes);
 app.use("/api", equiposRoutes);
 
+app.use("/api/parametrizacion-medallas", parametrizacionMedallasRoutes);
+
 // 🆕 Nueva ruta HU-Fases: gestión de estados de fases
 app.use("/api", fasesRoutes);
 
