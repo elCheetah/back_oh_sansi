@@ -1,4 +1,3 @@
-// src/controllers/aprobacionCalificaciones.controller.ts
 import { Request, Response } from "express";
 import {
   listarListasPendientesSrv,
@@ -9,17 +8,35 @@ import {
 
 function getUsuarioId(req: Request): number {
   // ADAPTA ESTO a cómo guardas el usuario en el request
-  // en tu proyecto creo que usas algo como req.usuario.id
   const anyReq = req as any;
   return anyReq.usuario?.id ?? 1;
 }
 
 /**
  * GET /api/aprobacion-calificaciones/listas-pendientes
+ * Opcional:
+ *   ?areaId=2  → solo listas de esa área
+ *   ?faseId=1  → solo esa fase (1 = Clasificatoria, 2 = Final, etc.)
  */
 export async function listarListasPendientesCtrl(req: Request, res: Response) {
   try {
-    const listas = await listarListasPendientesSrv();
+    const { areaId, faseId } = req.query;
+
+    const areaIdNum =
+      typeof areaId === "string" && areaId.trim() !== ""
+        ? Number(areaId)
+        : undefined;
+
+    const faseIdNum =
+      typeof faseId === "string" && faseId.trim() !== ""
+        ? Number(faseId)
+        : undefined;
+
+    const listas = await listarListasPendientesSrv({
+      areaId: !Number.isNaN(areaIdNum!) && areaIdNum! > 0 ? areaIdNum : undefined,
+      faseId: !Number.isNaN(faseIdNum!) && faseIdNum! > 0 ? faseIdNum : undefined,
+    });
+
     return res.json({
       ok: true,
       total: listas.length,
