@@ -47,10 +47,25 @@ function parseListaId(listaId: string) {
  * LISTAR LISTAS PENDIENTES
  * Agrupa evaluaciones no validadas por:
  * área + nivel + fase + evaluador + tipo de participación
+ *
+ * Filtros opcionales:
+ *  - areaId: solo esa área
+ *  - faseId: solo esa fase (Clasificatoria / Final, etc.)
  */
-export async function listarListasPendientesSrv() {
+export async function listarListasPendientesSrv(params?: {
+  areaId?: number;
+  faseId?: number;
+}) {
+  const { areaId, faseId } = params ?? {};
+
   const evaluaciones = await prisma.evaluaciones.findMany({
-    where: { validado: false },
+    where: {
+      validado: false,
+      ...(faseId ? { fase_id: faseId } : {}),
+      participacion: {
+        ...(areaId ? { area_id: areaId } : {}),
+      },
+    },
     include: {
       evaluador: true,
       fase: true,
@@ -95,9 +110,9 @@ export async function listarListasPendientesSrv() {
 
     const existente = grupos.get(key);
 
-    const evaluadorNombre = `${ev.evaluador.nombre} ${ev.evaluador.ap_paterno ?? ""} ${
-      ev.evaluador.ap_materno ?? ""
-    }`.trim();
+    const evaluadorNombre = `${ev.evaluador.nombre} ${
+      ev.evaluador.ap_paterno ?? ""
+    } ${ev.evaluador.ap_materno ?? ""}`.trim();
 
     const base = {
       id: key,
@@ -177,9 +192,9 @@ export async function obtenerDetalleListaSrv(listaId: string) {
     area: part0.area!.nombre,
     nivel: part0.nivel!.nombre,
     modalidad: part0.tipo === "INDIVIDUAL" ? "Individual" : "Equipo",
-    evaluador: `${primero.evaluador.nombre} ${primero.evaluador.ap_paterno ?? ""} ${
-      primero.evaluador.ap_materno ?? ""
-    }`.trim(),
+    evaluador: `${primero.evaluador.nombre} ${
+      primero.evaluador.ap_paterno ?? ""
+    } ${primero.evaluador.ap_materno ?? ""}`.trim(),
     fase: primero.fase.nombre,
   };
 
@@ -187,9 +202,9 @@ export async function obtenerDetalleListaSrv(listaId: string) {
     const part = ev.participacion!;
     let nombre = "";
     if (part.tipo === "INDIVIDUAL" && part.olimpista) {
-      nombre = `${part.olimpista.nombre} ${part.olimpista.ap_paterno ?? ""} ${
-        part.olimpista.ap_materno ?? ""
-      }`.trim();
+      nombre = `${part.olimpista.nombre} ${
+        part.olimpista.ap_paterno ?? ""
+      } ${part.olimpista.ap_materno ?? ""}`.trim();
     } else if (part.tipo === "EQUIPO" && part.equipo) {
       nombre = part.equipo.nombre;
     }
@@ -201,15 +216,21 @@ export async function obtenerDetalleListaSrv(listaId: string) {
       .map((n) => n[0]?.toUpperCase() ?? "")
       .join("");
 
-    // Código: usamos el id de la participación (similar a idParticipacion en otros listados)
     const codigo = String(part.id);
+    const notaNum = Number(ev.nota ?? 0);
 
-    const estado =
-      part.estado === "CLASIFICADO"
-        ? "Clasificado"
-        : part.estado === "DESCALIFICADO"
-        ? "Descalificado"
-        : "No clasificado";
+    // REGLA DE NEGOCIO PARA ESTADO:
+    // - Si la participación está descalificada → "Descalificado"
+    // - Si nota >= 60 → "Clasificado"
+    // - Si nota < 60 → "No clasificado"
+    let estado: "Clasificado" | "No clasificado" | "Descalificado";
+    if (part.estado === "DESCALIFICADO") {
+      estado = "Descalificado";
+    } else if (notaNum >= 60) {
+      estado = "Clasificado";
+    } else {
+      estado = "No clasificado";
+    }
 
     return {
       id: ev.id,
@@ -217,7 +238,7 @@ export async function obtenerDetalleListaSrv(listaId: string) {
       nombre,
       codigo,
       estado,
-      nota: Number(ev.nota),
+      nota: notaNum,
       observacion: ev.comentario ?? "",
     };
   });
