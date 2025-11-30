@@ -25,6 +25,8 @@ import medalleroRoutes from "./routes/medallero.routes";
 import { manejoErrores } from "./middlewares/manejo-errores";
 import gestionEvaluadorRoutes from "./routes/gestionEvaluador.routes";
 import parametrizacionMedallasRoutes from "./routes/parametrizacionMedallas.routes";
+import aprobacionCalificacionesRoutes from "./routes/aprobacionCalificaciones.routes";
+
 
 dotenv.config();
 
@@ -63,6 +65,7 @@ app.use("/api/asignaciones", asingarAreaNivelRoutes);
 // 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
 app.use("/api", inscritosRoutes);
 app.use("/api", equiposRoutes);
+app.use("/api", aprobacionCalificacionesRoutes);
 
 app.use("/api/parametrizacion-medallas", parametrizacionMedallasRoutes);
 
