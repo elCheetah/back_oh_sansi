@@ -6,7 +6,10 @@ export const registroEvaluadorSchema = z
     nombre: z.string().min(2, 'Nombre muy corto'),
     ap_paterno: z.string().min(2, 'Apellido paterno requerido'),
     ap_materno: z.string().optional().nullable(),
-    correo: z.string().email('Correo inválido').transform((v) => v.toLowerCase().trim()),
+    correo: z
+      .string()
+      .email('Correo inválido')
+      .transform((v) => v.toLowerCase().trim()),
     password: z
       .string()
       .min(8, 'La contraseña debe tener al menos 8 caracteres')
@@ -15,15 +18,27 @@ export const registroEvaluadorSchema = z
       .regex(/\d/, 'Debe tener al menos un número'),
     confirmPassword: z.string(), // 👈 campo extra
     telefono: z.string().optional().nullable(),
-    tipo_documento: z.enum(['CI', 'PASAPORTE', 'CARNET_EXTRANJERO', 'CERTIFICADO_NACIMIENTO']),
+    tipo_documento: z.enum([
+      'CI',
+      'PASAPORTE',
+      'CARNET_EXTRANJERO',
+      'CERTIFICADO_NACIMIENTO',
+    ]),
     numero_documento: z.string().min(4, 'Documento muy corto'),
     aceptaTerminos: z.literal(true, {
-      errorMap: () => ({ message: 'Debes aceptar los términos y condiciones' }),
+      errorMap: () => ({
+        message: 'Debes aceptar los términos y condiciones',
+      }),
     }),
+
+    // 👇👇 ESTOS TRES SON LOS QUE FALTABAN
+    profesion: z.string().trim().optional().nullable(),
+    institucion: z.string().trim().optional().nullable(),
+    cargo: z.string().trim().optional().nullable(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden',
-    path: ['confirmPassword'], // 👈 el error se asocia al campo confirmPassword
+    path: ['confirmPassword'],
   });
 
 export type RegistroEvaluadorInput = z.infer<typeof registroEvaluadorSchema>;
