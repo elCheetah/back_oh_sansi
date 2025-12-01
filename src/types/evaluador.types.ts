@@ -5,9 +5,17 @@ export interface RegistroEvaluadorDTO {
   ap_materno?: string | null;
   correo: string;
   password: string;
-  confirmPassword: string; // 👈 nuevo campo
+  confirmPassword: string;
   telefono?: string | null;
-  tipo_documento: 'CI' | 'PASAPORTE' | 'CARNET_EXTRANJERO' | 'CERTIFICADO_NACIMIENTO';
+  tipo_documento:
+    | 'CI'
+    | 'PASAPORTE'
+    | 'CARNET_EXTRANJERO'
+    | 'CERTIFICADO_NACIMIENTO';
   numero_documento: string;
   aceptaTerminos: boolean;
+
+  profesion?: string | null;   // 👈 NUEVO
+  institucion?: string | null; // 👈 NUEVO
+  cargo?: string | null;       // 👈 NUEVO
 }
