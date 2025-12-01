@@ -7,7 +7,7 @@ import {
 } from "../services/aprobacionCalificaciones.service";
 
 function getUsuarioId(req: Request): number {
-  // ADAPTA ESTO a cómo guardas el usuario en el request
+  // ADAPTA ESTO a cómo guardas el usuario en el request//
   const anyReq = req as any;
   return anyReq.usuario?.id ?? 1;
 }
