@@ -4,6 +4,9 @@ import { registrarEvaluador } from '../services/evaluador.service';
 
 export class EvaluadorController {
   static async registro(req: Request, res: Response) {
+    // 👇 LOG PARA VER QUÉ LLEGA REALMENTE
+    console.log('BODY REGISTRO EVALUADOR =>', req.body);
+
     const dto = req.body;
     const result = await registrarEvaluador(dto);
 
