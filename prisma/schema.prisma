@@ -9,105 +9,15 @@ datasource db {
 
 /**
  * =========================
- * Catálogos base
+ * Enums
  * =========================
  */
-
-model Areas {
-  id          Int     @id @default(autoincrement())
-  codigo      String? @db.VarChar(50)
-  nombre      String  @db.VarChar(100)
-  descripcion String? @db.Text
-  estado      Boolean @default(true)
-
-  config_medallas ConfigMedallas[]
-  participacion   Participacion[]
-  asignaciones    Asignaciones[]
-
-  @@unique([nombre])
-  @@unique([codigo])
-  @@map("areas")
-}
-
-model Niveles {
-  id          Int     @id @default(autoincrement())
-  codigo      String? @db.VarChar(50)
-  nombre      String  @db.VarChar(100)
-  descripcion String? @db.Text
-  estado      Boolean @default(true)
-
-  participacion   Participacion[]
-  config_medallas ConfigMedallas[]
-  asignaciones    Asignaciones[]
-
-  @@unique([nombre])
-  @@unique([codigo])
-  @@map("niveles")
-}
-
-model Asignaciones {
-  id         Int      @id @default(autoincrement())
-  usuario_id Int
-  area_id    Int
-  nivel_id   Int
-  activo     Boolean  @default(true)
-  creado_en  DateTime @default(now())
-
-  usuario Usuarios @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  area    Areas    @relation(fields: [area_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  nivel   Niveles  @relation(fields: [nivel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([usuario_id, area_id, nivel_id])
-  @@index([usuario_id])
-  @@index([area_id, nivel_id])
-  @@map("asignaciones")
-}
-
-model ConfigMedallas {
-  id        Int @id @default(autoincrement())
-  area_id   Int
-  nivel_id  Int
-  oros      Int @default(1)
-  platas    Int @default(1)
-  bronces   Int @default(1)
-  menciones Int @default(0)
-  nota_min_aprobacion Int @default(51)
-
-  area  Areas   @relation(fields: [area_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  nivel Niveles @relation(fields: [nivel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([area_id, nivel_id])
-  @@index([area_id])
-  @@index([nivel_id])
-  @@map("config_medallas")
-}
 
 enum EstadoFase {
   PENDIENTE
   EN_EJECUCION
-  EN_REVISION
   FINALIZADA
   CANCELADA
-  ARCHIVADA
-}
-
-model Fases {
-  id          Int        @id @default(autoincrement())
-  nombre      String     @db.VarChar(100)
-  descripcion String?    @db.Text
-  inicio      DateTime?
-  fin         DateTime?
-  estado      EstadoFase @default(PENDIENTE)
-  creado_en   DateTime   @default(now())
-
-  gestion Int
-
-  tipo TipoFase @default(CLASIFICATORIA)
-
-  evaluaciones Evaluaciones[]
-
-  @@unique([nombre, gestion])
-  @@map("fases")
 }
 
 enum TipoFase {
@@ -134,12 +44,106 @@ enum Rol {
   RESPONSABLE
 }
 
+enum RolEquipo {
+  LIDER
+  PARTICIPANTE
+}
+
+enum EstadoParticipacion {
+  CLASIFICADO
+  NO_CLASIFICADO
+  DESCALIFICADO
+}
+
+enum ModalidadCategoria {
+  INDIVIDUAL
+  GRUPAL
+}
+
+/**
+ * =========================
+ * Catálogos base
+ * =========================
+ */
+
+model Areas {
+  id          Int     @id @default(autoincrement())
+  codigo      String? @db.VarChar(50)
+  nombre      String  @db.VarChar(100)
+  descripcion String? @db.Text
+  estado      Boolean @default(true)
+
+  categorias Categorias[]
+
+  @@unique([nombre])
+  @@unique([codigo])
+  @@map("areas")
+}
+
+model Niveles {
+  id          Int     @id @default(autoincrement())
+  codigo      String? @db.VarChar(50)
+  nombre      String  @db.VarChar(100)
+  descripcion String? @db.Text
+  estado      Boolean @default(true)
+
+  categorias Categorias[]
+
+  @@unique([nombre])
+  @@unique([codigo])
+  @@map("niveles")
+}
+
+/**
+ * =========================
+ * Categorías
+ * =========================
+ */
+
+model Categorias {
+  id      Int @id @default(autoincrement())
+  gestion Int
+
+  area_id   Int
+  nivel_id  Int
+  modalidad ModalidadCategoria
+  estado    Boolean            @default(true)
+
+  nota_min_clasificacion Int @default(51)
+
+  // Medallero fase final
+  oros_final      Int @default(1)
+  platas_final    Int @default(1)
+  bronces_final   Int @default(1)
+  menciones_final Int @default(0)
+
+  creado_en DateTime @default(now())
+
+  area  Areas   @relation(fields: [area_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  nivel Niveles @relation(fields: [nivel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  participaciones Participacion[]
+  asignaciones    Asignaciones[]
+
+  @@unique([gestion, area_id, nivel_id, modalidad])
+  @@index([gestion])
+  @@index([area_id])
+  @@index([nivel_id])
+  @@map("categorias")
+}
+
+/**
+ * =========================
+ * Usuarios y seguridad
+ * =========================
+ */
+
 model Usuarios {
   id               Int           @id @default(autoincrement())
   contrasena_hash  String        @db.VarChar(255)
   nombre           String        @db.VarChar(100)
-  ap_paterno       String        @db.VarChar(100)
-  ap_materno       String?       @db.VarChar(100)
+  primer_apellido  String        @db.VarChar(100)
+  segundo_apellido String?       @db.VarChar(100)
   tipo_documento   TipoDocumento
   numero_documento String        @db.VarChar(20)
   correo           String        @unique @db.VarChar(150)
@@ -150,7 +154,7 @@ model Usuarios {
   estado           Boolean       @default(true)
   creado_en        DateTime      @default(now())
   actualizado_en   DateTime?
-  rol              Rol           @default(RESPONSABLE)
+  rol              Rol           @default(EVALUADOR)
 
   evaluaciones Evaluaciones[]
   logs         Logs[]
@@ -161,11 +165,47 @@ model Usuarios {
   @@map("usuarios")
 }
 
+/**
+ * =========================
+ * Fases (clasificatoria / final)
+ * =========================
+ */
+
+model Fases {
+  id          Int        @id @default(autoincrement())
+  nombre      String     @db.VarChar(100)
+  descripcion String?    @db.Text
+  inicio      DateTime?
+  fin         DateTime?
+  estado      EstadoFase @default(PENDIENTE)
+  creado_en   DateTime   @default(now())
+
+  // Gestión como atributo numérico (ej: 2025)
+  gestion Int
+
+  tipo TipoFase @default(CLASIFICATORIA)
+
+  // Flags para correo y publicación de resultados de ESA fase
+  correos_enviados      Boolean @default(false) // p.ej. ya se enviaron mails de clasificación/final
+  resultados_publicados Boolean @default(false) // visible en landing
+
+  evaluaciones Evaluaciones[]
+
+  @@unique([nombre, gestion])
+  @@map("fases")
+}
+
+/**
+ * =========================
+ * Tutores / Olimpistas / Equipos
+ * =========================
+ */
+
 model Tutores {
   id               Int           @id @default(autoincrement())
   nombre           String        @db.VarChar(100)
-  ap_paterno       String        @db.VarChar(100)
-  ap_materno       String?       @db.VarChar(100)
+  primer_apellido  String        @db.VarChar(100)
+  segundo_apellido String?       @db.VarChar(100)
   tipo_documento   TipoDocumento
   numero_documento String        @db.VarChar(20)
   telefono         String        @db.VarChar(20)
@@ -181,32 +221,28 @@ model Tutores {
 }
 
 model Olimpistas {
-  id               Int              @id @default(autoincrement())
-  nombre           String           @db.VarChar(100)
-  ap_paterno       String           @db.VarChar(100)
-  ap_materno       String?          @db.VarChar(100)
+  id               Int           @id @default(autoincrement())
+  nombre           String        @db.VarChar(100)
+  primer_apellido  String        @db.VarChar(100)
+  segundo_apellido String?       @db.VarChar(100)
   tipo_documento   TipoDocumento
-  numero_documento String           @db.VarChar(20)
-  unidad_educativa String           @db.VarChar(150)
-  departamento     String           @db.VarChar(100)
-  grado            String?          @db.VarChar(50)
+  numero_documento String        @db.VarChar(20)
+  unidad_educativa String        @db.VarChar(150)
+  departamento     String        @db.VarChar(100)
+  grado            String?       @db.VarChar(50)
   fecha_nacimiento DateTime?
   sexo             Sexo?
-  activo           Boolean          @default(true)
-  creado_en        DateTime         @default(now())
-  correo           String           @unique @db.VarChar(150)
+  estado           Boolean       @default(true)
+  creado_en        DateTime      @default(now())
+  correo           String        @unique @db.VarChar(150)
   tutor_id         Int?
-  tutor            Tutores?         @relation(fields: [tutor_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  participacion    Participacion[]
-  miembros_equipo  MiembrosEquipo[]
+  tutor            Tutores?      @relation(fields: [tutor_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  participacion   Participacion[]
+  miembros_equipo MiembrosEquipo[]
 
   @@unique([tipo_documento, numero_documento])
   @@map("olimpistas")
-}
-
-enum RolEquipo {
-  LIDER
-  PARTICIPANTE
 }
 
 model Equipos {
@@ -236,42 +272,55 @@ model MiembrosEquipo {
   @@map("miembros_equipo")
 }
 
-enum EstadoParticipacion {
-  CLASIFICADO
-  NO_CLASIFICADO
-  DESCALIFICADO
-}
-
-enum TipoParticipacion {
-  INDIVIDUAL
-  EQUIPO
-}
+/**
+ * =========================
+ * Participación y asignación a evaluadores
+ * =========================
+ */
 
 model Participacion {
   id           Int                 @id @default(autoincrement())
+  categoria_id Int
   olimpista_id Int?
   equipo_id    Int?
-  area_id      Int
-  nivel_id     Int
   estado       EstadoParticipacion @default(NO_CLASIFICADO)
-  tipo         TipoParticipacion
   creado_en    DateTime            @default(now())
 
+  categoria Categorias  @relation(fields: [categoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   olimpista Olimpistas? @relation(fields: [olimpista_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   equipo    Equipos?    @relation(fields: [equipo_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  area      Areas       @relation(fields: [area_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  nivel     Niveles     @relation(fields: [nivel_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   evaluaciones Evaluaciones[]
 
-  @@unique([olimpista_id, area_id, nivel_id])
-  @@unique([equipo_id, area_id, nivel_id])
+  @@unique([olimpista_id, categoria_id])
+  @@unique([equipo_id, categoria_id])
+  @@index([categoria_id])
   @@index([olimpista_id])
   @@index([equipo_id])
-  @@index([area_id])
-  @@index([nivel_id])
   @@map("participacion")
 }
+
+model Asignaciones {
+  id           Int      @id @default(autoincrement())
+  usuario_id   Int
+  categoria_id Int
+  estado       Boolean  @default(true)
+  creado_en    DateTime @default(now())
+
+  usuario   Usuarios   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  categoria Categorias @relation(fields: [categoria_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([usuario_id, categoria_id])
+  @@index([usuario_id])
+  @@index([categoria_id])
+  @@map("asignaciones")
+}
+
+/**
+ * =========================
+ * Evaluaciones
+ * =========================
+ */
 
 model Evaluaciones {
   id                  Int       @id @default(autoincrement())
@@ -281,7 +330,7 @@ model Evaluaciones {
   nota                Decimal   @db.Decimal(5, 2)
   comentario          String?   @db.Text
   creado_en           DateTime  @default(now())
-  validado            Boolean   @default(false)
+  validado            Boolean   @default(false) // Responsable la revisa
   ultima_modificacion DateTime?
 
   participacion Participacion @relation(fields: [participacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -294,6 +343,12 @@ model Evaluaciones {
   @@index([fase_id])
   @@map("evaluaciones")
 }
+
+/**
+ * =========================
+ * Reportes y Logs
+ * =========================
+ */
 
 model Reportes {
   id           Int      @id @default(autoincrement())
