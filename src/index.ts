@@ -21,6 +21,8 @@ import equiposRoutes from "./routes/equipos.routes";
 import fasesRoutes from "./routes/fases.routes"; // HU-Fases
 import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
 import medalleroRoutes from "./routes/medallero.routes";
+import estadisticasRoutes from "./routes/estadisticas.routes"; // estadisticas dashboard
+
 // 🧱 Middlewares
 import { manejoErrores } from "./middlewares/manejo-errores";
 import gestionEvaluadorRoutes from "./routes/gestionEvaluador.routes";
@@ -69,6 +71,8 @@ app.use("/api", aprobacionCalificacionesRoutes);
 
 app.use("/api/parametrizacion-medallas", parametrizacionMedallasRoutes);
 
+app.use("/api/estadisticas", estadisticasRoutes);
+
 // 🆕 Nueva ruta HU-Fases: gestión de estados de fases
 app.use("/api", fasesRoutes);
 
@@ -81,7 +85,7 @@ app.use((req, _res, next) => {
 
 app.use("/api", premiadosRoutes);
 
-app.use("/api", medalleroRoutes); 
+app.use("/api", medalleroRoutes);
 app.use("/api", gestionEvaluadorRoutes);
 // ============================
 // Health Check
