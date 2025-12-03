@@ -10,7 +10,7 @@ import estadisticasRoutes from "./routes/dashboardEstadisticas.routes";
 // ============================
 import authRoutes from "./routes/auth.routes";
 import recuperarPassRoutes from "./routes/recuperarPass.routes";
-
+import dashboardEvaluadorRoutes from "./routes/dashboardEvaluador.routes";
 
 
 const app = express();
@@ -36,7 +36,7 @@ app.use(helmet());
 app.use("/api/auth", authRoutes);
 app.use("/api/recuperarPass", recuperarPassRoutes);
 app.use("/api/estadisticas", estadisticasRoutes);
-
+app.use("/api/evaluador", dashboardEvaluadorRoutes);
 
 // ============================
 // Consulta de conexion a la db
