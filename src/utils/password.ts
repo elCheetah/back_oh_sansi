@@ -1,10 +1,8 @@
-// utils/password.ts
-import bcrypt from 'bcrypt';
-
-const ROUNDS = 10;
+import bcrypt from "bcryptjs";
 
 export async function hashPassword(plain: string): Promise<string> {
-  return bcrypt.hash(plain, ROUNDS);
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(plain, salt);
 }
 
 export async function comparePassword(plain: string, hash: string): Promise<boolean> {

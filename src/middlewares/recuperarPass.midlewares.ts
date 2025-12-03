@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 
-// PASO 1
 export function validarBodySolicitud(req: Request, res: Response, next: NextFunction) {
   const correo = String((req.body ?? {}).correo ?? "").trim();
   if (!correo) return res.status(400).json({ ok: false, message: "Datos incompletos." });
@@ -9,12 +8,13 @@ export function validarBodySolicitud(req: Request, res: Response, next: NextFunc
   next();
 }
 
-// PASO 2
 export function validarBodyVerificacion(req: Request, res: Response, next: NextFunction) {
   const correo = String((req.body ?? {}).correo ?? "").trim();
   const codigo = String((req.body ?? {}).codigo ?? "").trim();
 
-  if (!correo || !codigo) return res.status(400).json({ ok: false, message: "Datos incompletos." });
+  if (!correo || !codigo) {
+    return res.status(400).json({ ok: false, message: "Datos incompletos." });
+  }
 
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo) && !/\s/.test(correo);
   if (!emailOk) return res.status(400).json({ ok: false, message: "Formato de correo inválido." });
@@ -26,7 +26,6 @@ export function validarBodyVerificacion(req: Request, res: Response, next: NextF
   next();
 }
 
-// PASO 3
 export function validarBodyReset(req: Request, res: Response, next: NextFunction) {
   const body = req.body ?? {};
   const tokenRecuperacion = String(body.tokenRecuperacion ?? "");
@@ -41,7 +40,6 @@ export function validarBodyReset(req: Request, res: Response, next: NextFunction
     return res.status(400).json({ ok: false, message: "Las contraseñas no coinciden." });
   }
 
-  // Política: 8+; 1 mayús; 1 minús; 1 número; 1 especial; sin espacios.
   const politicaOk =
     nuevaContrasena.length >= 8 &&
     /[A-Z]/.test(nuevaContrasena) &&
@@ -53,7 +51,8 @@ export function validarBodyReset(req: Request, res: Response, next: NextFunction
   if (!politicaOk) {
     return res.status(400).json({
       ok: false,
-      message: "Contraseña inválida. Debe tener más de 8 caracteres entre mayúscula, minúscula, número y símbolo, sin espacios.",
+      message:
+        "Contraseña inválida. Debe tener más de 8 caracteres entre mayúscula, minúscula, número y símbolo, sin espacios.",
     });
   }
 

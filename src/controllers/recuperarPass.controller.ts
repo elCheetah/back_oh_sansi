@@ -6,22 +6,23 @@ import {
 } from "../services/recuperarPass.service";
 
 export const RecuperarPassController = {
-  // PASO 1: solicitar código por correo
   async solicitar(req: Request, res: Response) {
     const correo = String((req.body ?? {}).correo ?? "").trim();
     const r = await solicitarCodigoServicio(correo);
     return res.status(r.status).json({ ok: r.status === 200, message: r.message });
   },
 
-  // PASO 2: verificar código (NO cambia contraseña, solo devuelve token de recuperación)
   async verificar(req: Request, res: Response) {
     const { correo, codigo } = req.body as { correo: string; codigo: string };
     const r = await verificarCodigoServicio(correo, codigo);
-    if ("err" in r) return res.status(r.status).json({ ok: false, message: r.err });
-    return res.status(200).json({ ok: true, message: r.message, tokenRecuperacion: r.tokenRecuperacion });
+    if ("err" in r) {
+      return res.status(r.status).json({ ok: false, message: r.err });
+    }
+    return res
+      .status(200)
+      .json({ ok: true, message: r.message, tokenRecuperacion: r.tokenRecuperacion });
   },
 
-  // PASO 3: resetear contraseña (requiere tokenRecuperacion del paso 2)
   async resetear(req: Request, res: Response) {
     const { tokenRecuperacion, nuevaContrasena } = req.body as {
       tokenRecuperacion: string;
@@ -29,7 +30,9 @@ export const RecuperarPassController = {
       confirmarContrasena: string;
     };
     const r = await resetearContrasenaServicio(tokenRecuperacion, nuevaContrasena);
-    if ("err" in r) return res.status(r.status).json({ ok: false, message: r.err });
-    return res.status(200).json({ ok: true, message: r.message });
+    if ("err" in r) {
+      return res.status(r.status).json({ ok: false, message: r.err });
+    }
+    return res.status(200).json({ ok: true, ...r.data });
   },
 };
