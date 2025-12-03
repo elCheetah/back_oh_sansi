@@ -11,23 +11,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const database_1 = __importDefault(require("./config/database"));
 const express_fileupload_1 = __importDefault(require("express-fileupload"));
-// 🧩 Importar rutas existentes
+// Importar rutas de API
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
-const areaRoutes_1 = __importDefault(require("./routes/areaRoutes"));
-const nivelRoutes_1 = __importDefault(require("./routes/nivelRoutes"));
-const importarCSV_routes_1 = __importDefault(require("./routes/importarCSV.routes"));
-const evaluador_routes_1 = __importDefault(require("./routes/evaluador.routes"));
-const asignar_area_nivel_routes_1 = __importDefault(require("./routes/asignar-area-nivel.routes"));
-// 🆕 Importar nuevas rutas
-const inscritos_routes_1 = __importDefault(require("./routes/inscritos.routes")); // HU-04
-const equipos_routes_1 = __importDefault(require("./routes/equipos.routes"));
-const fases_routes_1 = __importDefault(require("./routes/fases.routes")); // HU-Fases
-const premiados_routes_1 = __importDefault(require("./routes/premiados.routes")); // HU-08 (premiados)
-const medallero_routes_1 = __importDefault(require("./routes/medallero.routes"));
-// 🧱 Middlewares
-const manejo_errores_1 = require("./middlewares/manejo-errores");
-const gestionEvaluador_routes_1 = __importDefault(require("./routes/gestionEvaluador.routes"));
-const parametrizacionMedallas_routes_1 = __importDefault(require("./routes/parametrizacionMedallas.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
@@ -49,25 +34,6 @@ app.use(express_1.default.urlencoded({ extended: true }));
 // Registro de rutas principales
 // ============================
 app.use("/api/auth", auth_routes_1.default);
-app.use("/api/evaluadores", evaluador_routes_1.default);
-app.use("/api/inscripciones", importarCSV_routes_1.default);
-app.use("/api/areas", areaRoutes_1.default);
-app.use("/api/niveles", nivelRoutes_1.default);
-app.use("/api/asignaciones", asignar_area_nivel_routes_1.default);
-// 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
-app.use("/api", inscritos_routes_1.default);
-app.use("/api", equipos_routes_1.default);
-app.use("/api/parametrizacion-medallas", parametrizacionMedallas_routes_1.default);
-// 🆕 Nueva ruta HU-Fases: gestión de estados de fases
-app.use("/api", fases_routes_1.default);
-// SIMULADOR TEMPORAL DE ADMIN (solo para pruebas locales)
-app.use((req, _res, next) => {
-    req.usuario = { id: 1, rol: "ADMINISTRADOR" };
-    next();
-});
-app.use("/api", premiados_routes_1.default);
-app.use("/api", medallero_routes_1.default);
-app.use("/api", gestionEvaluador_routes_1.default);
 // ============================
 // Health Check
 // ============================
@@ -81,12 +47,8 @@ app.get("/", async (req, res) => {
     }
 });
 // ============================
-// Middleware global de manejo de errores
-// ============================
-app.use(manejo_errores_1.manejoErrores);
-// ============================
 // Iniciar servidor
 // ============================
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
