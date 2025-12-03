@@ -7,27 +7,9 @@ import dotenv from "dotenv";
 import prisma from "./config/database";
 import fileUpload from "express-fileupload";
 
-// 🧩 Importar rutas existentes
+// Importar rutas de API
 import authRoutes from "./routes/auth.routes";
-import areaRoutes from "./routes/areaRoutes";
-import niveleRoutes from "./routes/nivelRoutes";
-import importarCSVRoutes from "./routes/importarCSV.routes";
-import evaluadorRoutes from "./routes/evaluador.routes";
-import asingarAreaNivelRoutes from "./routes/asignar-area-nivel.routes";
 
-// 🆕 Importar nuevas rutas
-import inscritosRoutes from "./routes/inscritos.routes"; // HU-04
-import equiposRoutes from "./routes/equipos.routes";
-import fasesRoutes from "./routes/fases.routes"; // HU-Fases
-import premiadosRoutes from "./routes/premiados.routes"; // HU-08 (premiados)
-import medalleroRoutes from "./routes/medallero.routes";
-import estadisticasRoutes from "./routes/estadisticas.routes"; // estadisticas dashboard
-
-// 🧱 Middlewares
-import { manejoErrores } from "./middlewares/manejo-errores";
-import gestionEvaluadorRoutes from "./routes/gestionEvaluador.routes";
-import parametrizacionMedallasRoutes from "./routes/parametrizacionMedallas.routes";
-import aprobacionCalificacionesRoutes from "./routes/aprobacionCalificaciones.routes";
 
 
 dotenv.config();
@@ -58,35 +40,6 @@ app.use(express.urlencoded({ extended: true }));
 // Registro de rutas principales
 // ============================
 app.use("/api/auth", authRoutes);
-app.use("/api/evaluadores", evaluadorRoutes);
-app.use("/api/inscripciones", importarCSVRoutes);
-app.use("/api/areas", areaRoutes);
-app.use("/api/niveles", niveleRoutes);
-app.use("/api/asignaciones", asingarAreaNivelRoutes);
-
-// 🆕 Nueva ruta HU-04: Lista de Olímpistas Inscritos
-app.use("/api", inscritosRoutes);
-app.use("/api", equiposRoutes);
-app.use("/api", aprobacionCalificacionesRoutes);
-
-app.use("/api/parametrizacion-medallas", parametrizacionMedallasRoutes);
-
-app.use("/api/estadisticas", estadisticasRoutes);
-
-// 🆕 Nueva ruta HU-Fases: gestión de estados de fases
-app.use("/api", fasesRoutes);
-
-// SIMULADOR TEMPORAL DE ADMIN (solo para pruebas locales)
-app.use((req, _res, next) => {
-  (req as any).usuario = { id: 1, rol: "ADMINISTRADOR" };
-  next();
-});
-
-
-app.use("/api", premiadosRoutes);
-
-app.use("/api", medalleroRoutes);
-app.use("/api", gestionEvaluadorRoutes);
 // ============================
 // Health Check
 // ============================
@@ -99,14 +52,10 @@ app.get("/", async (req, res) => {
   }
 });
 
-// ============================
-// Middleware global de manejo de errores
-// ============================
-app.use(manejoErrores);
 
 // ============================
 // Iniciar servidor
 // ============================
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
