@@ -1,31 +1,24 @@
-// src/index.ts
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import dotenv from "dotenv";
-import prisma from "./config/database";
 import fileUpload from "express-fileupload";
+import prisma from "./config/database";
 
-// Importar rutas de API
+// ============================
+// Importacion de rutas
+// ============================
 import authRoutes from "./routes/auth.routes";
-
-
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ============================
-// Configuración general
-// ============================
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 app.use(
   fileUpload({
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+    limits: { fileSize: 50 * 1024 * 1024 },
     abortOnLimit: true,
     useTempFiles: false,
   })
@@ -33,28 +26,28 @@ app.use(
 
 app.use(cors());
 app.use(helmet());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // ============================
-// Registro de rutas principales
+// Ruta de APIs
 // ============================
 app.use("/api/auth", authRoutes);
+
+
 // ============================
-// Health Check
+// Consulta de conexion a la db
 // ============================
-app.get("/", async (req, res) => {
+app.get("/", async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({ status: "ok", db: "connected" });
-  } catch (error) {
+  } catch {
     res.status(500).json({ status: "error", db: "not connected" });
   }
 });
 
 
 // ============================
-// Iniciar servidor
+// Running server
 // ============================
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
