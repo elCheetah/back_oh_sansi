@@ -10,7 +10,7 @@ import {
   type Roles,
 } from "../utils/jwt";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET: string = process.env.JWT_SECRET || "";
 if (!JWT_SECRET) {
   throw new Error("Falta JWT_SECRET");
 }
