@@ -9,6 +9,9 @@ import prisma from "./config/database";
 // Importacion de rutas
 // ============================
 import authRoutes from "./routes/auth.routes";
+import recuperarPassRoutes from "./routes/recuperarPass.routes";
+
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +34,8 @@ app.use(helmet());
 // Ruta de APIs
 // ============================
 app.use("/api/auth", authRoutes);
+app.use("/api/recuperarPass", recuperarPassRoutes);
+
 
 
 // ============================
