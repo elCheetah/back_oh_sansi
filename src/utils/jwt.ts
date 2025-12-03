@@ -1,13 +1,12 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
 import crypto from "crypto";
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET: string = process.env.JWT_SECRET || "";
 if (!JWT_SECRET) {
   throw new Error("Falta JWT_SECRET");
 }
 
 export const TOKEN_TTL_SECONDS = 60 * 60 * 2;
-
 export type Roles = "ADMINISTRADOR" | "EVALUADOR" | "RESPONSABLE";
 
 export type AuthTokenPayload = {
