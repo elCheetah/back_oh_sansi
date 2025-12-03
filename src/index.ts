@@ -4,7 +4,7 @@ import cors from "cors";
 import helmet from "helmet";
 import fileUpload from "express-fileupload";
 import prisma from "./config/database";
-
+import estadisticasRoutes from "./routes/dashboardEstadisticas.routes";
 // ============================
 // Importacion de rutas
 // ============================
@@ -35,7 +35,7 @@ app.use(helmet());
 // ============================
 app.use("/api/auth", authRoutes);
 app.use("/api/recuperarPass", recuperarPassRoutes);
-
+app.use("/api/estadisticas", estadisticasRoutes);
 
 
 // ============================
