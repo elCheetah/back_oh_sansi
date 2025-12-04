@@ -17,6 +17,8 @@ import categoriasRoutes from "./routes/categorias.routes";
 import areaRoutes from "./routes/areaRoutes";
 import niveleRoutes from "./routes/nivelRoutes";
 
+import configMedallasRoutes from "./routes/configMedallas.routes";
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +47,8 @@ app.use("/api/evaluador", dashboardEvaluadorRoutes);
 
 
 app.use("/api/categorias", categoriasRoutes);
+
+app.use("/api/config-medallas", configMedallasRoutes);
 
 app.use("/api/areas", areaRoutes);
 app.use("/api/niveles", niveleRoutes);
