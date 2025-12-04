@@ -19,7 +19,7 @@ import areaRoutes from "./routes/areaRoutes";
 import niveleRoutes from "./routes/nivelRoutes";
 
 import configMedallasRoutes from "./routes/configMedallas.routes";
-
+import asignacionesEvaluadorRoutes from "./routes/asignacionesEvaluador.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +51,8 @@ app.use("/api/evaluacion-individual", evaluacionIndividualRoutes);
 app.use("/api/categorias", categoriasRoutes);
 
 app.use("/api/config-medallas", configMedallasRoutes);
+
+app.use("/api/asignaciones-evaluador", asignacionesEvaluadorRoutes);
 
 app.use("/api/areas", areaRoutes);
 app.use("/api/niveles", niveleRoutes);
