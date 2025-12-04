@@ -1,49 +1,20 @@
 // src/services/dashboardEvaluador.service.ts
-import prisma from "../config/database";
+import { prisma } from "../config/database";
 
 export const DashboardEvaluadorService = {
   async getStats(evaluadorId: number) {
     // 1. Obtener categorías asignadas al evaluador (activas)
-    const categoriasAsignadas = await prisma.asignaciones.findMany({
+    const categoriasAsignadas = await prisma.asignaciones.count({
       where: {
         usuario_id: evaluadorId,
         estado: true,
       },
-      select: {
-        categoria: {
-          select: {
-            id: true,
-            modalidad: true,
-            nota_min_clasificacion: true,
-          },
-        },
-      },
     });
 
-    const categoriaIds = categoriasAsignadas.map((a) => a.categoria.id);
-
-    if (categoriaIds.length === 0) {
-      return {
-        categoriasAsignadas: 0,
-        evaluadasTotal: 0,
-        aprobados: 0,
-        reprobados: 0,
-        porcentajeAprobacion: 0,
-        individuales: 0,
-        grupales: 0,
-        porcentajeIndividual: 0,
-        porcentajeGrupal: 0,
-        validadasPorResponsable: 0,
-      };
-    }
-
-    // 2. Todas las evaluaciones del evaluador en sus categorías
+    // 2. Todas las evaluaciones del evaluador (históricas y actuales)
     const evaluaciones = await prisma.evaluaciones.findMany({
       where: {
         evaluador_id: evaluadorId,
-        participacion: {
-          categoria_id: { in: categoriaIds },
-        },
       },
       include: {
         participacion: {
@@ -80,15 +51,19 @@ export const DashboardEvaluadorService = {
 
     const reprobados = totalEvaluadas - aprobados;
     const porcentajeAprobacion =
-      totalEvaluadas > 0 ? Number(((aprobados / totalEvaluadas) * 100).toFixed(1)) : 0;
+      totalEvaluadas > 0
+        ? Number(((aprobados / totalEvaluadas) * 100).toFixed(1))
+        : 0;
 
     const totalParticipantes = individuales + grupales;
     const porcentajeIndividual =
-      totalParticipantes > 0 ? Number(((individuales / totalParticipantes) * 100).toFixed(1)) : 0;
+      totalParticipantes > 0
+        ? Number(((individuales / totalParticipantes) * 100).toFixed(1))
+        : 0;
     const porcentajeGrupal = 100 - porcentajeIndividual;
 
     return {
-      categoriasAsignadas: categoriaIds.length,
+      categoriasAsignadas,
       evaluadasTotal: totalEvaluadas,
       aprobados,
       reprobados,
