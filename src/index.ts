@@ -11,6 +11,7 @@ import estadisticasRoutes from "./routes/dashboardEstadisticas.routes";
 import authRoutes from "./routes/auth.routes";
 import recuperarPassRoutes from "./routes/recuperarPass.routes";
 import dashboardEvaluadorRoutes from "./routes/dashboardEvaluador.routes";
+import evaluacionIndividualRoutes from "./routes/evaluacionIndividual.routes";
 
 import categoriasRoutes from "./routes/categorias.routes";
 
@@ -42,6 +43,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/recuperarPass", recuperarPassRoutes);
 app.use("/api/estadisticas", estadisticasRoutes);
 app.use("/api/evaluador", dashboardEvaluadorRoutes);
+app.use("/api/evaluacion-individual", evaluacionIndividualRoutes);
 
 
 app.use("/api/categorias", categoriasRoutes);
