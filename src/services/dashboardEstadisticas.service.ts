@@ -1,99 +1,97 @@
 // src/services/estadisticas.service.ts
 import { prisma } from "../config/database";
 
-interface RawStatsRow {
-  total_olimpistas: bigint;
-  total_responsables: bigint;
-  total_evaluadores: bigint;
-  total_inscritos: bigint;
-  area_id: number | null;
-  nivel_id: number | null;
-}
-
 export const EstadisticasService = {
   async getDashboardStats() {
-    const [rawStats, areas, niveles] = await Promise.all([
-      // Forzamos el tipo con as
-      prisma.$queryRaw<RawStatsRow[]>`
-        SELECT 
-          COUNT(DISTINCT o.id) AS total_olimpistas,
-          COUNT(DISTINCT CASE WHEN u.rol = 'RESPONSABLE' AND u.estado = true THEN u.id END) AS total_responsables,
-          COUNT(DISTINCT CASE WHEN u.rol = 'EVALUADOR' AND u.estado = true THEN u.id END) AS total_evaluadores,
-          COUNT(p.id) AS total_inscritos,
-          c.area_id,
-          c.nivel_id
-        FROM "participacion" p
-        INNER JOIN "categorias" c ON p.categoria_id = c.id
-        LEFT JOIN "olimpistas" o ON p.olimpista_id = o.id
-        LEFT JOIN "equipos" eq ON p.equipo_id = eq.id
-        LEFT JOIN "miembros_equipo" me ON eq.id = me.equipo_id
-        LEFT JOIN "olimpistas" o2 ON me.olimpista_id = o2.id
-        LEFT JOIN "usuarios" u ON u.rol IN ('RESPONSABLE', 'EVALUADOR') AND u.estado = true
-        GROUP BY c.area_id, c.nivel_id
-      `,
-
-      prisma.areas.findMany({
-        where: { estado: true },
-        select: { id: true, nombre: true },
+    const [
+      totalOlimpistas,
+      totalResponsables,
+      totalEvaluadores,
+      totalInscritos,
+      participacionesPorCategoria,
+      categorias,
+    ] = await Promise.all([
+      prisma.olimpistas.count(),
+      prisma.usuarios.count({
+        where: { rol: "RESPONSABLE", estado: true },
       }),
-
-      prisma.niveles.findMany({
-        select: { id: true, nombre: true },
+      prisma.usuarios.count({
+        where: { rol: "EVALUADOR", estado: true },
+      }),
+      prisma.participacion.count(),
+      prisma.participacion.groupBy({
+        by: ["categoria_id"],
+        _count: {
+          id: true,
+        },
+      }),
+      prisma.categorias.findMany({
+        include: {
+          area: true,
+          nivel: true,
+        },
       }),
     ]);
 
-    // Convertir bigint a number
-    const stats = rawStats.map(row => ({
-      total_olimpistas: Number(row.total_olimpistas),
-      total_responsables: Number(row.total_responsables),
-      total_evaluadores: Number(row.total_evaluadores),
-      total_inscritos: Number(row.total_inscritos),
-      area_id: row.area_id,
-      nivel_id: row.nivel_id,
-    }));
+    // Mapas para acumular conteos
+    const areaCount: Record<number, { nombre: string; cantidad: number }> = {};
+    const nivelCount: Record<number, { nombre: string; cantidad: number }> = {};
 
-    const areaMap = Object.fromEntries(areas.map(a => [a.id, a.nombre]));
-    const nivelMap = Object.fromEntries(niveles.map(n => [n.id, n.nombre]));
+    // Crear mapa de categorías para acceso rápido
+    const categoriasMap = new Map(categorias.map((c) => [c.id, c]));
 
-    // Acumular por área y nivel
-    const areaCount: Record<number, number> = {};
-    const nivelCount: Record<number, number> = {};
+    // Procesar los grupos de participaciones
+    participacionesPorCategoria.forEach((p) => {
+      const categoria = categoriasMap.get(p.categoria_id);
+      const cantidad = p._count.id;
 
-    let totalInscritos = 0;
-    let totalOlimpistas = 0;
-    let totalResponsables = 0;
-    let totalEvaluadores = 0;
+      if (categoria) {
+        // Acumular por Área
+        if (categoria.area) {
+          const areaId = categoria.area.id;
+          if (!areaCount[areaId]) {
+            areaCount[areaId] = {
+              nombre: categoria.area.nombre,
+              cantidad: 0,
+            };
+          }
+          areaCount[areaId].cantidad += cantidad;
+        }
 
-    stats.forEach(row => {
-      totalInscritos += row.total_inscritos;
-      totalOlimpistas = Math.max(totalOlimpistas, row.total_olimpistas);
-      totalResponsables = Math.max(totalResponsables, row.total_responsables);
-      totalEvaluadores = Math.max(totalEvaluadores, row.total_evaluadores);
-
-      if (row.area_id) {
-        areaCount[row.area_id] = (areaCount[row.area_id] || 0) + row.total_inscritos;
-      }
-      if (row.nivel_id) {
-        nivelCount[row.nivel_id] = (nivelCount[row.nivel_id] || 0) + row.total_inscritos;
+        // Acumular por Nivel
+        if (categoria.nivel) {
+          const nivelId = categoria.nivel.id;
+          if (!nivelCount[nivelId]) {
+            nivelCount[nivelId] = {
+              nombre: categoria.nivel.nombre,
+              cantidad: 0,
+            };
+          }
+          nivelCount[nivelId].cantidad += cantidad;
+        }
       }
     });
 
     const calcularPorcentaje = (cantidad: number) =>
-      totalInscritos > 0 ? Number((cantidad / totalInscritos * 100).toFixed(1)) : 0;
+      totalInscritos > 0
+        ? Number(((cantidad / totalInscritos) * 100).toFixed(1))
+        : 0;
 
-    const porArea = Object.entries(areaCount)
-      .map(([id, cantidad]) => ({
-        nombre: areaMap[Number(id)] || "Desconocido",
-        cantidad,
-        porcentaje: calcularPorcentaje(cantidad),
+    const porArea = Object.values(areaCount)
+      .map((item) => ({
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        porcentaje: calcularPorcentaje(item.cantidad),
       }))
       .sort((a, b) => b.cantidad - a.cantidad);
 
-    const porNivel = Object.entries(nivelCount).map(([id, cantidad]) => ({
-      nombre: nivelMap[Number(id)] || "Desconocido",
-      cantidad,
-      porcentaje: calcularPorcentaje(cantidad),
-    }));
+    const porNivel = Object.values(nivelCount)
+      .map((item) => ({
+        nombre: item.nombre,
+        cantidad: item.cantidad,
+        porcentaje: calcularPorcentaje(item.cantidad),
+      }))
+      .sort((a, b) => b.cantidad - a.cantidad);
 
     return {
       olimpistas: totalOlimpistas,
