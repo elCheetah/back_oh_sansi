@@ -11,7 +11,7 @@ import estadisticasRoutes from "./routes/dashboardEstadisticas.routes";
 import authRoutes from "./routes/auth.routes";
 import recuperarPassRoutes from "./routes/recuperarPass.routes";
 import dashboardEvaluadorRoutes from "./routes/dashboardEvaluador.routes";
-
+import categoriasRoutes from "./routes/categorias.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -38,6 +38,7 @@ app.use("/api/recuperarPass", recuperarPassRoutes);
 app.use("/api/estadisticas", estadisticasRoutes);
 app.use("/api/evaluador", dashboardEvaluadorRoutes);
 
+app.use("/api/categorias", categoriasRoutes);
 // ============================
 // Consulta de conexion a la db
 // ============================
