@@ -1,5 +1,5 @@
 // src/services/categorias.service.ts
-import prismaClient from "../config/prismaClient";
+import prismaClient from "../config/database";
 const prisma: any = prismaClient; // 👈 prisma como any para evitar errores de tipos
 
 import { Rol } from "@prisma/client";
@@ -45,15 +45,15 @@ export async function listarCategoriasSrv(filtro: FiltroCategorias) {
 
     const responsable = asignacion
       ? {
-          id: asignacion.usuario.id,
-          nombreCompleto: [
-            asignacion.usuario.nombre,
-            asignacion.usuario.primer_apellido,
-            asignacion.usuario.segundo_apellido,
-          ]
-            .filter(Boolean)
-            .join(" "),
-        }
+        id: asignacion.usuario.id,
+        nombreCompleto: [
+          asignacion.usuario.nombre,
+          asignacion.usuario.primer_apellido,
+          asignacion.usuario.segundo_apellido,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      }
       : null;
 
     return {
@@ -284,15 +284,15 @@ export async function asignarResponsableCategoriaSrv(
 
   const responsable = asignacion
     ? {
-        id: asignacion.usuario.id,
-        nombreCompleto: [
-          asignacion.usuario.nombre,
-          asignacion.usuario.primer_apellido,
-          asignacion.usuario.segundo_apellido,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      }
+      id: asignacion.usuario.id,
+      nombreCompleto: [
+        asignacion.usuario.nombre,
+        asignacion.usuario.primer_apellido,
+        asignacion.usuario.segundo_apellido,
+      ]
+        .filter(Boolean)
+        .join(" "),
+    }
     : null;
 
   return {
@@ -330,10 +330,10 @@ export async function listarResponsablesDisponiblesSrv(
           estado: true,
           ...(gestion
             ? {
-                categoria: {
-                  gestion,
-                },
-              }
+              categoria: {
+                gestion,
+              },
+            }
             : {}),
         },
       },
