@@ -1,3 +1,4 @@
+//
 export const CATALOGOS = {
   TIPO_PART: ['INDIVIDUAL', 'EQUIPO'] as const,
   OLI_TDOC: ['CI', 'PASAPORTE', 'CARNET_EXTRANJERO', 'CERTIFICADO_NACIMIENTO'] as const,
