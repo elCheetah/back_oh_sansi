@@ -21,6 +21,9 @@ import niveleRoutes from "./routes/nivelRoutes";
 import configMedallasRoutes from "./routes/configMedallas.routes";
 import asignacionesEvaluadorRoutes from "./routes/asignacionesEvaluador.routes";
 
+import inscritosIndividualesRoutes from "./routes/inscritosIndividuales.routes";
+import inscritosGrupalesRoutes from "./routes/inscritosGrupales.routes";
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -57,6 +60,8 @@ app.use("/api/asignaciones-evaluador", asignacionesEvaluadorRoutes);
 app.use("/api/areas", areaRoutes);
 app.use("/api/niveles", niveleRoutes);
 
+app.use("/api/inscritos/individuales", inscritosIndividualesRoutes);
+app.use("/api/inscritos/grupales", inscritosGrupalesRoutes);
 // ============================
 // Consulta de conexion a la db
 // ============================
