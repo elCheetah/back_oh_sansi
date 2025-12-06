@@ -1,4 +1,3 @@
-// src/services/inscritosIndividuales.service.ts
 import { PrismaClient, EstadoParticipacion, ModalidadCategoria } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -6,6 +5,7 @@ const prisma = new PrismaClient();
 export type InscritoIndividualDTO = {
   idParticipacion: number;
   idOlimpista: number;
+  ci: string;
   nombreCompleto: string;
   unidadEducativa: string;
   modalidad: ModalidadCategoria;
@@ -70,6 +70,7 @@ export const InscritosIndividualesService = {
       return {
         idParticipacion: p.id,
         idOlimpista: o.id,
+        ci: o.numero_documento,
         nombreCompleto: nombreCompleto(
           o.nombre,
           o.primer_apellido,

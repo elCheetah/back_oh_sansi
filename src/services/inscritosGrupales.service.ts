@@ -1,4 +1,3 @@
-// src/services/inscritosGrupales.service.ts
 import {
   PrismaClient,
   EstadoParticipacion,
@@ -10,6 +9,7 @@ const prisma = new PrismaClient();
 
 export type IntegranteGrupoDTO = {
   idOlimpista: number;
+  ci: string;
   nombreCompleto: string;
   rol: RolEquipo;
 };
@@ -93,6 +93,7 @@ export const InscritosGrupalesService = {
         const o = m.olimpista!;
         return {
           idOlimpista: o.id,
+          ci: o.numero_documento,
           nombreCompleto: nombreCompleto(
             o.nombre,
             o.primer_apellido,
