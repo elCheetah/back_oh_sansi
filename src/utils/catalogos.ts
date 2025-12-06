@@ -1,10 +1,13 @@
 import prisma from './../config/database';
+import { ModalidadCategoria } from '@prisma/client';
 
 export type Catalogos = {
-    areasPorCodigo: Map<string, { id: number; nombre: string }>;
-    areasPorNombre: Map<string, { id: number; codigo: string | null }>;
-    nivelesPorCodigo: Map<string, { id: number; nombre: string }>;
-    nivelesPorNombre: Map<string, { id: number; codigo: string | null }>;
+  areasPorNombre: Map<string, { id: number }>;
+  nivelesPorNombre: Map<string, { id: number }>;
+  categoriasPorClave: Map<
+    string,
+    { id: number; gestion: number; modalidad: ModalidadCategoria; areaId: number; nivelId: number }
+  >;
 };
 
 let cacheCatalogos: Catalogos | null = null;
@@ -15,54 +18,70 @@ let promesaCompartida: Promise<Catalogos> | null = null;
 const CACHE_TTL = 10 * 60 * 1000;
 
 export async function cargarCatalogos(): Promise<Catalogos> {
-    const ahora = Date.now();
+  const ahora = Date.now();
 
-    if (cacheCatalogos && ahora - ultimaActualizacion < CACHE_TTL) {
-        return cacheCatalogos;
-    }
+  if (cacheCatalogos && ahora - ultimaActualizacion < CACHE_TTL) {
+    return cacheCatalogos;
+  }
 
-    if (cargando && promesaCompartida) return promesaCompartida;
+  if (cargando && promesaCompartida) return promesaCompartida;
 
-    cargando = true;
+  cargando = true;
 
-    promesaCompartida = (async () => {
-        try {
-            const [areas, niveles] = await Promise.all([
-                prisma.areas.findMany({ where: { estado: true } }),
-                prisma.niveles.findMany({ where: { estado: true } }),
-            ]);
+  promesaCompartida = (async () => {
+    try {
+      const [areas, niveles, categorias] = await Promise.all([
+        prisma.areas.findMany({ where: { estado: true } }),
+        prisma.niveles.findMany({ where: { estado: true } }),
+        prisma.categorias.findMany({
+          where: { estado: true },
+          select: { id: true, gestion: true, area_id: true, nivel_id: true, modalidad: true }
+        })
+      ]);
 
-            const areasPorCodigo = new Map<string, { id: number; nombre: string }>();
-            const areasPorNombre = new Map<string, { id: number; codigo: string | null }>();
+      const areasPorNombre = new Map<string, { id: number }>();
+      for (const a of areas) {
+        areasPorNombre.set(a.nombre.toUpperCase(), { id: a.id });
+      }
 
-            for (const a of areas) {
-                if (a.codigo)
-                    areasPorCodigo.set(a.codigo.toUpperCase(), { id: a.id, nombre: a.nombre });
-                areasPorNombre.set(a.nombre.toUpperCase(), { id: a.id, codigo: a.codigo });
-            }
+      const nivelesPorNombre = new Map<string, { id: number }>();
+      for (const n of niveles) {
+        nivelesPorNombre.set(n.nombre.toUpperCase(), { id: n.id });
+      }
 
-            const nivelesPorCodigo = new Map<string, { id: number; nombre: string }>();
-            const nivelesPorNombre = new Map<string, { id: number; codigo: string | null }>();
+      const categoriasPorClave = new Map<
+        string,
+        { id: number; gestion: number; modalidad: ModalidadCategoria; areaId: number; nivelId: number }
+      >();
 
-            for (const n of niveles) {
-                if (n.codigo)
-                    nivelesPorCodigo.set(n.codigo.toUpperCase(), { id: n.id, nombre: n.nombre });
-                nivelesPorNombre.set(n.nombre.toUpperCase(), { id: n.id, codigo: n.codigo });
-            }
+      for (const c of categorias) {
+        const clave = `${c.area_id}|${c.nivel_id}|${c.modalidad}`;
+        const existente = categoriasPorClave.get(clave);
 
-            cacheCatalogos = { areasPorCodigo, areasPorNombre, nivelesPorCodigo, nivelesPorNombre };
-            ultimaActualizacion = Date.now();
-            return cacheCatalogos;
-        } finally {
-            cargando = false;
+        if (!existente || c.gestion > existente.gestion) {
+          categoriasPorClave.set(clave, {
+            id: c.id,
+            gestion: c.gestion,
+            modalidad: c.modalidad,
+            areaId: c.area_id,
+            nivelId: c.nivel_id
+          });
         }
-    })();
+      }
 
-    return promesaCompartida;
+      cacheCatalogos = { areasPorNombre, nivelesPorNombre, categoriasPorClave };
+      ultimaActualizacion = Date.now();
+      return cacheCatalogos;
+    } finally {
+      cargando = false;
+    }
+  })();
+
+  return promesaCompartida;
 }
 
 export function limpiarCacheCatalogos() {
-    cacheCatalogos = null;
-    ultimaActualizacion = 0;
-    console.log('Caché de catálogos limpiado manualmente.');
+  cacheCatalogos = null;
+  ultimaActualizacion = 0;
+  console.log('Caché de catálogos limpiado manualmente.');
 }

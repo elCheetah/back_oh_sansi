@@ -17,18 +17,16 @@ export function emailMinusculas(v: string): string {
   return limpiarCadena(v).toLowerCase();
 }
 
-/**
- * Versión NO genérica para evitar TS2862 al reindexar dinámicamente.
- * Devuelve un objeto indexable seguro para los validadores.
- */
 export function normalizarFila(fila: Record<string, any>): Record<string, any> {
   const copia: Record<string, any> = { ...fila };
 
-  ['TIPO_PART', 'OLI_TDOC', 'OLI_SEXO', 'ROL_EQUIPO', 'AREA_COD', 'NIVEL_COD'].forEach((k) => {
+  ['MODALIDAD', 'OLI_TDOC', 'OLI_SEXO', 'ROL_EQUIPO', 'AREA_NOMBRE', 'NIVEL_NOMBRE'].forEach((k) => {
     if (k in copia) copia[k] = mayus(copia[k]);
   });
 
-  Object.keys(copia).forEach((k) => (copia[k] = limpiarCadena(copia[k])));
+  Object.keys(copia).forEach((k) => {
+    copia[k] = limpiarCadena(copia[k]);
+  });
 
   if ('TUTOR_CORREO' in copia) copia['TUTOR_CORREO'] = emailMinusculas(copia['TUTOR_CORREO']);
   if ('OLI_CORREO' in copia) copia['OLI_CORREO'] = emailMinusculas(copia['OLI_CORREO']);

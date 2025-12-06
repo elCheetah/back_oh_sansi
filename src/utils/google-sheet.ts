@@ -20,7 +20,6 @@ async function getFirstSheetTitle(auth: any): Promise<string> {
   return first;
 }
 
-/** Sube y reemplaza TODO el contenido de la primera hoja (A1 en adelante). */
 export async function subirYReemplazarContenido(filas: any[]) {
   if (!filas || filas.length === 0) return;
   const auth = getAuth();
@@ -28,22 +27,21 @@ export async function subirYReemplazarContenido(filas: any[]) {
   const title = await getFirstSheetTitle(auth);
 
   const headers = Object.keys(filas[0]);
-  const values = [headers, ...filas.map((f) => headers.map((h) => (f[h] ?? '')))];
+  const values = [headers, ...filas.map((f) => headers.map((h) => f[h] ?? ''))];
 
   await sheets.spreadsheets.values.clear({
     spreadsheetId: SHEET_ID,
-    range: `${title}!A1:ZZZ`,
+    range: `${title}!A1:ZZZ`
   });
 
   await sheets.spreadsheets.values.update({
     spreadsheetId: SHEET_ID,
     range: `${title}!A1`,
     valueInputOption: 'RAW',
-    requestBody: { values },
+    requestBody: { values }
   });
 }
 
-/** Lee TODA la primera hoja y devuelve arreglo de objetos usando la fila 1 como headers. */
 export async function leerContenidoPrimeraHoja(): Promise<any[]> {
   const auth = getAuth();
   const sheets = google.sheets({ version: 'v4', auth });
@@ -53,7 +51,7 @@ export async function leerContenidoPrimeraHoja(): Promise<any[]> {
     spreadsheetId: SHEET_ID,
     range: `${title}!A1:ZZZ`,
     valueRenderOption: 'UNFORMATTED_VALUE',
-    dateTimeRenderOption: 'FORMATTED_STRING',
+    dateTimeRenderOption: 'FORMATTED_STRING'
   });
 
   const rows = resp.data.values || [];
@@ -64,10 +62,11 @@ export async function leerContenidoPrimeraHoja(): Promise<any[]> {
 
   const objetos = dataRows.map((r: any[]) => {
     const obj: Record<string, any> = {};
-    headers.forEach((h: string, i: number) => (obj[h] = r[i] ?? ''));
+    headers.forEach((h: string, i: number) => {
+      obj[h] = r[i] ?? '';
+    });
     return obj;
   });
 
-  // Filtra filas totalmente vacías
   return objetos.filter((o) => Object.values(o).some((v) => (v ?? '') !== ''));
 }
