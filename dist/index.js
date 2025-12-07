@@ -9,7 +9,6 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const express_fileupload_1 = __importDefault(require("express-fileupload"));
 const database_1 = __importDefault(require("./config/database"));
-const dashboardEstadisticas_routes_1 = __importDefault(require("./routes/dashboardEstadisticas.routes"));
 // ============================
 // Importacion de rutas
 // ============================
@@ -17,6 +16,7 @@ const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const recuperarPass_routes_1 = __importDefault(require("./routes/recuperarPass.routes"));
 const dashboardEvaluador_routes_1 = __importDefault(require("./routes/dashboardEvaluador.routes"));
 const evaluacionIndividual_routes_1 = __importDefault(require("./routes/evaluacionIndividual.routes"));
+const dashboardEstadisticas_routes_1 = __importDefault(require("./routes/dashboardEstadisticas.routes"));
 const categorias_routes_1 = __importDefault(require("./routes/categorias.routes"));
 const areaRoutes_1 = __importDefault(require("./routes/areaRoutes"));
 const nivelRoutes_1 = __importDefault(require("./routes/nivelRoutes"));
@@ -24,6 +24,9 @@ const configMedallas_routes_1 = __importDefault(require("./routes/configMedallas
 const asignacionesEvaluador_routes_1 = __importDefault(require("./routes/asignacionesEvaluador.routes"));
 const inscritosIndividuales_routes_1 = __importDefault(require("./routes/inscritosIndividuales.routes"));
 const inscritosGrupales_routes_1 = __importDefault(require("./routes/inscritosGrupales.routes"));
+const importarCSV_routes_1 = __importDefault(require("./routes/importarCSV.routes"));
+const historial_routes_1 = __importDefault(require("./routes/historial.routes"));
+const parametrizarMedallero_routes_1 = __importDefault(require("./routes/parametrizarMedallero.routes"));
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 app.use(express_1.default.json({ limit: "50mb" }));
@@ -48,8 +51,11 @@ app.use("/api/config-medallas", configMedallas_routes_1.default);
 app.use("/api/asignaciones-evaluador", asignacionesEvaluador_routes_1.default);
 app.use("/api/areas", areaRoutes_1.default);
 app.use("/api/niveles", nivelRoutes_1.default);
+app.use('/api/inscripciones', importarCSV_routes_1.default);
 app.use("/api/inscritos/individuales", inscritosIndividuales_routes_1.default);
 app.use("/api/inscritos/grupales", inscritosGrupales_routes_1.default);
+app.use('/api/historial', historial_routes_1.default);
+app.use("/api/parametrizacion-medallas", parametrizarMedallero_routes_1.default);
 // ============================
 // Consulta de conexion a la db
 // ============================

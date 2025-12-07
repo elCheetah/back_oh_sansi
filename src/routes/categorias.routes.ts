@@ -5,29 +5,40 @@ import {
   eliminarCategoriaController,
   asignarResponsableCategoriaController,
   listarResponsablesDisponiblesController,
+  listarAreasActivasController,
+  listarNivelesActivosController,
 } from "../controllers/categorias.controller";
 import {
   validarCrearCategoria,
   validarAsignarResponsable,
 } from "../middlewares/validarCategorias";
-// IMPORTA TU requireAuth / requireRol reales
-// import { requireAuth, requireRol } from "../middlewares/auth";
+import { validateAuth } from "../middlewares/validarAuth";
 
 const router = Router();
 
-// Todas las rutas asumo solo ADMIN
-// router.use(requireAuth, requireRol(["ADMINISTRADOR"]));
+// Todas las rutas protegidas con auth
+router.use(validateAuth);
 
-router.get("/", listarCategoriasController); // ?gestion=2025
+// Categorías (lista simple para asignar responsable / tabla front)
+router.get("/", listarCategoriasController); // por defecto gestión = año actual
+
+// Catálogos para selects
+router.get("/areas", listarAreasActivasController);
+router.get("/niveles", listarNivelesActivosController);
+
+// Crear categoría (gestion opcional, default año actual)
 router.post("/", validarCrearCategoria, crearCategoriaController);
+
+// Eliminación lógica
 router.delete("/:idCategoria", eliminarCategoriaController);
 
-// responsables
+// Usuarios disponibles para ser responsables
 router.get(
   "/responsables/disponibles",
   listarResponsablesDisponiblesController
-); // ?gestion=2025
+);
 
+// Asignar responsable a categoría
 router.put(
   "/:idCategoria/responsable",
   validarAsignarResponsable,

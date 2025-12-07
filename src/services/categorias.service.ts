@@ -1,6 +1,5 @@
-// src/services/categorias.service.ts
 import prismaClient from "../config/database";
-const prisma: any = prismaClient; // 👈 prisma como any para evitar errores de tipos
+const prisma: any = prismaClient;
 
 import { Rol } from "@prisma/client";
 
@@ -8,7 +7,29 @@ type FiltroCategorias = {
   gestion?: number;
 };
 
-export async function listarCategoriasSrv(filtro: FiltroCategorias) {
+type ResponsableDTO = {
+  id: number;
+  nombreCompleto: string;
+} | null;
+
+type CategoriaDTO = {
+  id: number;
+  gestion: number;
+  area: { id: number; nombre: string };
+  nivel: { id: number; nombre: string };
+  modalidad: string;
+  nota_min_clasificacion: number;
+  oros_final: number;
+  platas_final: number;
+  bronces_final: number;
+  menciones_final: number;
+  creado_en: Date;
+  responsable: ResponsableDTO;
+};
+
+export async function listarCategoriasSrv(
+  filtro: FiltroCategorias
+): Promise<CategoriaDTO[]> {
   const { gestion } = filtro;
 
   const categorias = await prisma.categorias.findMany({
@@ -17,8 +38,8 @@ export async function listarCategoriasSrv(filtro: FiltroCategorias) {
       ...(gestion ? { gestion } : {}),
     },
     include: {
-      area: { select: { id: true, nombre: true } },
-      nivel: { select: { id: true, nombre: true } },
+      area: { select: { id: true, nombre: true, estado: true } },
+      nivel: { select: { id: true, nombre: true, estado: true } },
       asignaciones: {
         where: { estado: true },
         include: {
@@ -28,6 +49,7 @@ export async function listarCategoriasSrv(filtro: FiltroCategorias) {
               nombre: true,
               primer_apellido: true,
               segundo_apellido: true,
+              estado: true,
             },
           },
         },
@@ -41,26 +63,28 @@ export async function listarCategoriasSrv(filtro: FiltroCategorias) {
   });
 
   return categorias.map((cat: any) => {
-    const asignacion = cat.asignaciones[0];
+    const asignacion = cat.asignaciones.find(
+      (a: any) => a.usuario && a.usuario.estado
+    );
 
-    const responsable = asignacion
+    const responsable: ResponsableDTO = asignacion
       ? {
-        id: asignacion.usuario.id,
-        nombreCompleto: [
-          asignacion.usuario.nombre,
-          asignacion.usuario.primer_apellido,
-          asignacion.usuario.segundo_apellido,
-        ]
-          .filter(Boolean)
-          .join(" "),
-      }
+          id: asignacion.usuario.id,
+          nombreCompleto: [
+            asignacion.usuario.nombre,
+            asignacion.usuario.primer_apellido,
+            asignacion.usuario.segundo_apellido,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        }
       : null;
 
     return {
       id: cat.id,
       gestion: cat.gestion,
-      area: cat.area,
-      nivel: cat.nivel,
+      area: { id: cat.area.id, nombre: cat.area.nombre },
+      nivel: { id: cat.nivel.id, nombre: cat.nivel.nombre },
       modalidad: cat.modalidad,
       nota_min_clasificacion: cat.nota_min_clasificacion,
       oros_final: cat.oros_final,
@@ -74,29 +98,20 @@ export async function listarCategoriasSrv(filtro: FiltroCategorias) {
 }
 
 type CrearCategoriaPayload = {
-  gestion: number;
+  gestion?: number;
   area_id: number;
   nivel_id: number;
   modalidad: "INDIVIDUAL" | "GRUPAL";
-  nota_min_clasificacion?: number;
-  oros_final?: number;
-  platas_final?: number;
-  bronces_final?: number;
-  menciones_final?: number;
 };
 
-export async function crearCategoriaSrv(payload: CrearCategoriaPayload) {
-  const {
-    gestion,
-    area_id,
-    nivel_id,
-    modalidad,
-    nota_min_clasificacion,
-    oros_final,
-    platas_final,
-    bronces_final,
-    menciones_final,
-  } = payload;
+// Crea o reactiva categoría (si existe misma combinación pero estado=false)
+export async function crearCategoriaSrv(payload: CrearCategoriaPayload): Promise<{
+  categoria: CategoriaDTO;
+  reactivada: boolean;
+}> {
+  const { gestion, area_id, nivel_id, modalidad } = payload;
+
+  const gestionReal = gestion ?? new Date().getFullYear();
 
   const [area, nivel] = await Promise.all([
     prisma.areas.findFirst({ where: { id: area_id, estado: true } }),
@@ -117,38 +132,83 @@ export async function crearCategoriaSrv(payload: CrearCategoriaPayload) {
     };
   }
 
-  const categoria = await prisma.categorias.create({
-    data: {
-      gestion,
-      area_id,
-      nivel_id,
-      modalidad: modalidad as any, // enum ModalidadCategoria
-      nota_min_clasificacion: nota_min_clasificacion ?? 51,
-      oros_final: oros_final ?? 1,
-      platas_final: platas_final ?? 1,
-      bronces_final: bronces_final ?? 1,
-      menciones_final: menciones_final ?? 0,
-    },
-    include: {
-      area: { select: { id: true, nombre: true } },
-      nivel: { select: { id: true, nombre: true } },
+  // Busco si ya existe la categoría (única por gestion+area+nivel+modalidad)
+  const existente = await prisma.categorias.findUnique({
+    where: {
+      gestion_area_id_nivel_id_modalidad: {
+        gestion: gestionReal,
+        area_id,
+        nivel_id,
+        modalidad,
+      },
     },
   });
 
-  return {
-    id: categoria.id,
-    gestion: categoria.gestion,
-    area: categoria.area,
-    nivel: categoria.nivel,
-    modalidad: categoria.modalidad,
-    nota_min_clasificacion: categoria.nota_min_clasificacion,
-    oros_final: categoria.oros_final,
-    platas_final: categoria.platas_final,
-    bronces_final: categoria.bronces_final,
-    menciones_final: categoria.menciones_final,
-    creado_en: categoria.creado_en,
+  let categoriaDb: any;
+  let reactivada = false;
+
+  if (!existente) {
+    categoriaDb = await prisma.categorias.create({
+      data: {
+        gestion: gestionReal,
+        area_id,
+        nivel_id,
+        modalidad,
+        nota_min_clasificacion: 51,
+        oros_final: 1,
+        platas_final: 1,
+        bronces_final: 1,
+        menciones_final: 0,
+        estado: true,
+      },
+      include: {
+        area: { select: { id: true, nombre: true } },
+        nivel: { select: { id: true, nombre: true } },
+      },
+    });
+  } else if (existente && !existente.estado) {
+    // Reactivar categoría lógica
+    categoriaDb = await prisma.categorias.update({
+      where: { id: existente.id },
+      data: {
+        estado: true,
+        nota_min_clasificacion: 51,
+        oros_final: 1,
+        platas_final: 1,
+        bronces_final: 1,
+        menciones_final: 0,
+      },
+      include: {
+        area: { select: { id: true, nombre: true } },
+        nivel: { select: { id: true, nombre: true } },
+      },
+    });
+    reactivada = true;
+  } else {
+    // Ya existe y está activa
+    throw {
+      codigo: "CATEGORIA_DUPLICADA",
+      mensaje:
+        "Ya existe una categoría activa con esa gestión, área, nivel y modalidad",
+    };
+  }
+
+  const categoria: CategoriaDTO = {
+    id: categoriaDb.id,
+    gestion: categoriaDb.gestion,
+    area: { id: categoriaDb.area.id, nombre: categoriaDb.area.nombre },
+    nivel: { id: categoriaDb.nivel.id, nombre: categoriaDb.nivel.nombre },
+    modalidad: categoriaDb.modalidad,
+    nota_min_clasificacion: categoriaDb.nota_min_clasificacion,
+    oros_final: categoriaDb.oros_final,
+    platas_final: categoriaDb.platas_final,
+    bronces_final: categoriaDb.bronces_final,
+    menciones_final: categoriaDb.menciones_final,
+    creado_en: categoriaDb.creado_en,
     responsable: null,
   };
+
+  return { categoria, reactivada };
 }
 
 export async function eliminarCategoriaSrv(idCategoria: number) {
@@ -170,9 +230,18 @@ export async function eliminarCategoriaSrv(idCategoria: number) {
 
   if (!categoria) return null;
 
-  await prisma.categorias.update({
-    where: { id: idCategoria },
-    data: { estado: false },
+  await prisma.$transaction(async (tx: any) => {
+    // Eliminación lógica de categoría
+    await tx.categorias.update({
+      where: { id: idCategoria },
+      data: { estado: false },
+    });
+
+    // Desactivar asignaciones asociadas
+    await tx.asignaciones.updateMany({
+      where: { categoria_id: idCategoria, estado: true },
+      data: { estado: false },
+    });
   });
 
   return true;
@@ -181,12 +250,12 @@ export async function eliminarCategoriaSrv(idCategoria: number) {
 export async function asignarResponsableCategoriaSrv(
   idCategoria: number,
   usuarioId: number
-) {
+): Promise<{ categoria: CategoriaDTO; responsableAnteriorId: number | null }> {
   const categoria = await prisma.categorias.findUnique({
     where: { id: idCategoria },
     include: {
-      area: { select: { id: true, nombre: true } },
-      nivel: { select: { id: true, nombre: true } },
+      area: { select: { id: true, nombre: true, estado: true } },
+      nivel: { select: { id: true, nombre: true, estado: true } },
     },
   });
 
@@ -208,19 +277,19 @@ export async function asignarResponsableCategoriaSrv(
     };
   }
 
-  if (usuario.rol !== Rol.RESPONSABLE) {
+  if (usuario.rol === Rol.ADMINISTRADOR) {
     throw {
-      codigo: "ROL_INCORRECTO",
-      mensaje: "Solo usuarios con rol RESPONSABLE pueden ser asignados",
+      codigo: "ROL_INVALIDO",
+      mensaje: "No se puede asignar un ADMINISTRADOR como responsable",
     };
   }
 
+  // No se puede asignar un responsable a más de una categoría
   const asignacionExistenteUsuario = await prisma.asignaciones.findFirst({
     where: {
       usuario_id: usuarioId,
       estado: true,
     },
-    include: { categoria: true },
   });
 
   if (
@@ -230,23 +299,54 @@ export async function asignarResponsableCategoriaSrv(
     throw {
       codigo: "RESPONSABLE_YA_ASIGNADO",
       mensaje:
-        "Este responsable ya está asignado a otra categoría y no puede repetirse",
+        "Este usuario ya está asignado como responsable en otra categoría",
     };
   }
 
+  // Asignación actual de la categoría (si ya tenía responsable)
   const asignacionActual = await prisma.asignaciones.findFirst({
     where: { categoria_id: idCategoria, estado: true },
   });
 
-  if (!asignacionActual || asignacionActual.usuario_id !== usuarioId) {
-    await prisma.$transaction(async (tx: any) => {
-      if (asignacionActual) {
-        await tx.asignaciones.update({
-          where: { id: asignacionActual.id },
-          data: { estado: false },
-        });
-      }
+  const responsableAnteriorId: number | null =
+    asignacionActual?.usuario_id ?? null;
 
+  // Asignación (o reactivación) para este usuario+categoría
+  const asignacionCategoriaUsuario = await prisma.asignaciones.findFirst({
+    where: {
+      categoria_id: idCategoria,
+      usuario_id: usuarioId,
+    },
+  });
+
+  await prisma.$transaction(async (tx: any) => {
+    // Si era EVALUADOR, al asignar se vuelve RESPONSABLE
+    if (usuario.rol === Rol.EVALUADOR) {
+      await tx.usuarios.update({
+        where: { id: usuarioId },
+        data: { rol: Rol.RESPONSABLE },
+      });
+    }
+
+    // Desactivar responsable anterior (si era otro usuario)
+    if (
+      asignacionActual &&
+      (!asignacionCategoriaUsuario ||
+        asignacionActual.id !== asignacionCategoriaUsuario.id)
+    ) {
+      await tx.asignaciones.update({
+        where: { id: asignacionActual.id },
+        data: { estado: false },
+      });
+    }
+
+    // Reactivar/crear asignación para este usuario
+    if (asignacionCategoriaUsuario) {
+      await tx.asignaciones.update({
+        where: { id: asignacionCategoriaUsuario.id },
+        data: { estado: true },
+      });
+    } else {
       await tx.asignaciones.create({
         data: {
           usuario_id: usuarioId,
@@ -256,8 +356,8 @@ export async function asignarResponsableCategoriaSrv(
           indice_fin: null,
         },
       });
-    });
-  }
+    }
+  });
 
   const categoriaConAsignacion = await prisma.categorias.findUnique({
     where: { id: idCategoria },
@@ -282,24 +382,30 @@ export async function asignarResponsableCategoriaSrv(
 
   const asignacion = categoriaConAsignacion?.asignaciones[0];
 
-  const responsable = asignacion
+  const responsable: ResponsableDTO = asignacion
     ? {
-      id: asignacion.usuario.id,
-      nombreCompleto: [
-        asignacion.usuario.nombre,
-        asignacion.usuario.primer_apellido,
-        asignacion.usuario.segundo_apellido,
-      ]
-        .filter(Boolean)
-        .join(" "),
-    }
+        id: asignacion.usuario.id,
+        nombreCompleto: [
+          asignacion.usuario.nombre,
+          asignacion.usuario.primer_apellido,
+          asignacion.usuario.segundo_apellido,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      }
     : null;
 
-  return {
+  const categoriaDTO: CategoriaDTO = {
     id: categoriaConAsignacion!.id,
     gestion: categoriaConAsignacion!.gestion,
-    area: categoriaConAsignacion!.area,
-    nivel: categoriaConAsignacion!.nivel,
+    area: {
+      id: categoriaConAsignacion!.area.id,
+      nombre: categoriaConAsignacion!.area.nombre,
+    },
+    nivel: {
+      id: categoriaConAsignacion!.nivel.id,
+      nombre: categoriaConAsignacion!.nivel.nombre,
+    },
     modalidad: categoriaConAsignacion!.modalidad,
     nota_min_clasificacion:
       categoriaConAsignacion!.nota_min_clasificacion,
@@ -310,31 +416,31 @@ export async function asignarResponsableCategoriaSrv(
     creado_en: categoriaConAsignacion!.creado_en,
     responsable,
   };
+
+  return {
+    categoria: categoriaDTO,
+    responsableAnteriorId,
+  };
 }
 
 type FiltroResponsablesDisponibles = {
   gestion?: number;
 };
 
+// Usuarios disponibles para ser responsables:
+// - estado=true
+// - rol EVALUADOR o RESPONSABLE (nunca ADMINISTRADOR)
+// - sin NINGUNA asignación activa (estado=true) en asignaciones
 export async function listarResponsablesDisponiblesSrv(
-  filtro: FiltroResponsablesDisponibles
+  _filtro: FiltroResponsablesDisponibles
 ) {
-  const { gestion } = filtro;
-
-  const responsables = await prisma.usuarios.findMany({
+  const usuarios = await prisma.usuarios.findMany({
     where: {
       estado: true,
-      rol: Rol.RESPONSABLE,
+      rol: { in: [Rol.EVALUADOR, Rol.RESPONSABLE] },
       asignaciones: {
         none: {
           estado: true,
-          ...(gestion
-            ? {
-              categoria: {
-                gestion,
-              },
-            }
-            : {}),
         },
       },
     },
@@ -343,7 +449,6 @@ export async function listarResponsablesDisponiblesSrv(
       nombre: true,
       primer_apellido: true,
       segundo_apellido: true,
-      correo: true,
     },
     orderBy: [
       { primer_apellido: "asc" },
@@ -352,11 +457,32 @@ export async function listarResponsablesDisponiblesSrv(
     ],
   });
 
-  return responsables.map((u: any) => ({
+  return usuarios.map((u: any) => ({
     id: u.id,
     nombreCompleto: [u.nombre, u.primer_apellido, u.segundo_apellido]
       .filter(Boolean)
       .join(" "),
-    correo: u.correo,
   }));
+}
+
+// Catálogo áreas activas
+export async function listarAreasActivasSrv() {
+  const areas = await prisma.areas.findMany({
+    where: { estado: true },
+    select: { id: true, nombre: true },
+    orderBy: { nombre: "asc" },
+  });
+
+  return areas;
+}
+
+// Catálogo niveles activos
+export async function listarNivelesActivosSrv() {
+  const niveles = await prisma.niveles.findMany({
+    where: { estado: true },
+    select: { id: true, nombre: true },
+    orderBy: { nombre: "asc" },
+  });
+
+  return niveles;
 }
