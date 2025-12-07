@@ -22,8 +22,13 @@ const areaRoutes_1 = __importDefault(require("./routes/areaRoutes"));
 const nivelRoutes_1 = __importDefault(require("./routes/nivelRoutes"));
 const configMedallas_routes_1 = __importDefault(require("./routes/configMedallas.routes"));
 const asignacionesEvaluador_routes_1 = __importDefault(require("./routes/asignacionesEvaluador.routes"));
+<<<<<<< Updated upstream
 const inscritosIndividuales_routes_1 = __importDefault(require("./routes/inscritosIndividuales.routes"));
 const inscritosGrupales_routes_1 = __importDefault(require("./routes/inscritosGrupales.routes"));
+=======
+const clasificadosRoutes_1 = __importDefault(require("./routes/clasificadosRoutes"));
+const premiadosRoutes_1 = __importDefault(require("./routes/premiadosRoutes"));
+>>>>>>> Stashed changes
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 app.use(express_1.default.json({ limit: "50mb" }));
@@ -48,8 +53,13 @@ app.use("/api/config-medallas", configMedallas_routes_1.default);
 app.use("/api/asignaciones-evaluador", asignacionesEvaluador_routes_1.default);
 app.use("/api/areas", areaRoutes_1.default);
 app.use("/api/niveles", nivelRoutes_1.default);
+<<<<<<< Updated upstream
 app.use("/api/inscritos/individuales", inscritosIndividuales_routes_1.default);
 app.use("/api/inscritos/grupales", inscritosGrupales_routes_1.default);
+=======
+app.use('/api/clasificados', clasificadosRoutes_1.default);
+app.use('/api/premiados', premiadosRoutes_1.default);
+>>>>>>> Stashed changes
 // ============================
 // Consulta de conexion a la db
 // ============================
