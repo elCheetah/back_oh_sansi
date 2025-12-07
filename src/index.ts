@@ -33,7 +33,7 @@ import premiadosRoutes from './routes/premiadosRoutes';
 import filtrosRoutes from './routes/filtrosRoutes';
 import olimpistaRoutes from './routes/consultaOlimpistaRoutes';
 import evaluadoresRoutes from "./routes/evaluadores.routes";
-
+import designarEvaluadoresRoutes from "./routes/designarevaluadores.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -82,7 +82,7 @@ app.use('/api/premiados', premiadosRoutes);
 app.use('/api/filtros/categorias', filtrosRoutes);
 app.use('/api/olimpista', olimpistaRoutes);
 app.use("/api/evaluadores", evaluadoresRoutes);
-
+app.use("/api/designar-evaluadores", designarEvaluadoresRoutes);
 
 // ============================
 // Consulta de conexion a la db
