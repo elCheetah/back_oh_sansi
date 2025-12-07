@@ -14,6 +14,7 @@ import dashboardEvaluadorRoutes from "./routes/dashboardEvaluador.routes";
 import evaluacionIndividualRoutes from "./routes/evaluacionIndividual.routes";
 import estadisticasRoutes from "./routes/dashboardEstadisticas.routes";
 import categoriasRoutes from "./routes/categorias.routes";
+import evaluadorRoutes from "./routes/evaluador.routes";
 
 import areaRoutes from "./routes/areaRoutes";
 import niveleRoutes from "./routes/nivelRoutes";
@@ -65,6 +66,7 @@ app.use("/api/evaluacion-individual", evaluacionIndividualRoutes);
 app.use("/api/categorias", categoriasRoutes);
 
 app.use("/api/config-medallas", configMedallasRoutes);
+app.use("/api/evaluadores", evaluadorRoutes);
 
 app.use("/api/asignaciones-evaluador", asignacionesEvaluadorRoutes);
 
