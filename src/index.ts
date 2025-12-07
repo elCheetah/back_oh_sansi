@@ -28,6 +28,11 @@ import importarCSVRoutes from './routes/importarCSV.routes';
 import historialRoutes from './routes/historial.routes';
 import parametrizarMedalleroRoutes from "./routes/parametrizarMedallero.routes";
 
+import clasificadosRoutes from './routes/clasificadosRoutes';
+import premiadosRoutes from './routes/premiadosRoutes';
+import filtrosRoutes from './routes/filtrosRoutes';
+import olimpistaRoutes from './routes/consultaOlimpistaRoutes';
+
 
 
 const app = express();
@@ -72,7 +77,10 @@ app.use("/api/inscritos/grupales", inscritosGrupalesRoutes);
 app.use('/api/historial', historialRoutes);
 app.use("/api/parametrizacion-medallas", parametrizarMedalleroRoutes);
 
-
+app.use('/api/clasificados', clasificadosRoutes);
+app.use('/api/premiados', premiadosRoutes);
+app.use('/api/categorias/filtros', filtrosRoutes);
+app.use('/api/olimpista', olimpistaRoutes);
 
 // ============================
 // Consulta de conexion a la db
