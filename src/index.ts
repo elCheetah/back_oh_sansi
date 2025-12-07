@@ -26,6 +26,9 @@ import inscritosGrupalesRoutes from "./routes/inscritosGrupales.routes";
 
 import importarCSVRoutes from './routes/importarCSV.routes';
 import historialRoutes from './routes/historial.routes';
+import parametrizarMedalleroRoutes from "./routes/parametrizarMedallero.routes";
+
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,6 +70,8 @@ app.use('/api/inscripciones', importarCSVRoutes);
 app.use("/api/inscritos/individuales", inscritosIndividualesRoutes);
 app.use("/api/inscritos/grupales", inscritosGrupalesRoutes);
 app.use('/api/historial', historialRoutes);
+app.use("/api/parametrizacion-medallas", parametrizarMedalleroRoutes);
+
 
 
 // ============================
