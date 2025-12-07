@@ -82,7 +82,7 @@ app.use('/api/premiados', premiadosRoutes);
 app.use('/api/filtros/categorias', filtrosRoutes);
 app.use('/api/olimpista', olimpistaRoutes);
 app.use("/api/evaluadores", evaluadoresRoutes);
-app.use("/api/designar-evaluadores", designarEvaluadoresRoutes);
+app.use("/api/designar", designarEvaluadoresRoutes);
 
 // ============================
 // Consulta de conexion a la db

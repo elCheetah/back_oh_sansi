@@ -11,28 +11,28 @@ const router = Router();
 
 // Lista categorías con sus evaluadores asignados
 router.get(
-  "/",
+  "/evaluadores",
   validateAuth,
   listarCategoriasConEvaluadoresController
 );
 
 // Lista evaluadores disponibles para una categoría (para el select)
 router.get(
-  "/:idCategoria/evaluadores-disponibles",
+  "/evaluadores/:idCategoria/evaluadores-disponibles",
   validateAuth,
   listarEvaluadoresDisponiblesController
 );
 
 // Asignar evaluador a categoría
 router.post(
-  "/:idCategoria/evaluadores",
+  "/evaluadores/:idCategoria/evaluadores",
   validateAuth,
   asignarEvaluadorCategoriaController
 );
 
 // Eliminar (desactivar) asignación de evaluador de categoría
 router.delete(
-  "/:idCategoria/evaluadores/:idEvaluador",
+  "/evaluadores/:idCategoria/evaluadores/:idEvaluador",
   validateAuth,
   eliminarAsignacionEvaluadorController
 );
