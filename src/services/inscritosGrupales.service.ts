@@ -155,6 +155,7 @@ export const InscritosGrupalesService = {
       ]);
 
     return {
+      updated: deletedParticipaciones.count, 
       deletedEvaluaciones: deletedEvals.count,
       deletedParticipaciones: deletedParticipaciones.count,
       deletedMiembros: deletedMiembros.count,
