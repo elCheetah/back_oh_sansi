@@ -35,6 +35,11 @@ import filtrosRoutes from './routes/filtrosRoutes';
 import olimpistaRoutes from './routes/consultaOlimpistaRoutes';
 import evaluadoresRoutes from "./routes/evaluadores.routes";
 import designarEvaluadoresRoutes from "./routes/designarevaluadores.routes";
+import gestionFasesRoutes from "./routes/gestionFases.routes";
+
+import ganadoresCertificadoRoutes from "./routes/ganadoresCertificado.routes";
+import evaluacionesRoutes from "./routes/evaluaciones.routes";
+import aprobarCalificacionesRoutes from "./routes/aprobarCalificaciones.routes";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -85,6 +90,11 @@ app.use('/api/filtros/categorias', filtrosRoutes);
 app.use('/api/olimpista', olimpistaRoutes);
 app.use("/api/evaluadores", evaluadoresRoutes);
 app.use("/api/designar", designarEvaluadoresRoutes);
+app.use("/api/gestion-fases", gestionFasesRoutes);
+
+app.use("/api/ganadores-certificados", ganadoresCertificadoRoutes);
+app.use("/api/evaluaciones", evaluacionesRoutes);
+app.use("/api/aprobacion-calificaciones", aprobarCalificacionesRoutes);
 
 // ============================
 // Consulta de conexion a la db

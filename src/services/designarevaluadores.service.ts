@@ -30,41 +30,72 @@ function buildNombreCompletoUsuario(u: {
   primer_apellido: string;
   segundo_apellido: string | null;
 }): string {
-  return `${u.nombre} ${u.primer_apellido}${
-    u.segundo_apellido ? " " + u.segundo_apellido : ""
-  }`.trim();
+  return `${u.nombre} ${u.primer_apellido}${u.segundo_apellido ? " " + u.segundo_apellido : ""
+    }`.trim();
 }
 
-function etiquetaParticipacion(p: any): string | null {
-  if (p.olimpista) {
-    return p.olimpista.primer_apellido || null;
+function etiquetaParticipacion(
+  p: any,
+  modalidad: "INDIVIDUAL" | "GRUPAL"
+): string | null {
+  // INDIVIDUAL → usamos apellido del olimpista
+  if (modalidad === "INDIVIDUAL") {
+    return p.olimpista?.primer_apellido ?? null;
   }
-  if (p.equipo) {
-    return p.equipo.nombre || null;
+
+  // GRUPAL → usamos nombre del equipo
+  if (modalidad === "GRUPAL") {
+    return p.equipo?.nombre ?? null;
   }
+
   return null;
 }
+
 
 // ===============================
 // Redistribuir indices participaciones
 // ===============================
 
 async function redistribuirParticipaciones(categoriaId: number): Promise<void> {
+  // 1) Obtener la categoría para saber la modalidad
+  const categoria = await prisma.categorias.findUnique({
+    where: { id: categoriaId },
+    select: { modalidad: true },
+  });
+
+  if (!categoria) {
+    // Categoría eliminada o inexistente, nada que hacer
+    return;
+  }
+
+  // 2) Participaciones válidas según modalidad
   const participaciones = await prisma.participacion.findMany({
-    where: { categoria_id: categoriaId },
+    where: {
+      categoria_id: categoriaId,
+      ...(categoria.modalidad === "INDIVIDUAL"
+        ? { olimpista_id: { not: null } } // solo individuales
+        : { equipo_id: { not: null } }), // solo grupales
+    },
     orderBy: { id: "asc" },
   });
 
   const total = participaciones.length;
 
-  const asignacionesActivas = await prisma.asignaciones.findMany({
-    where: { categoria_id: categoriaId, estado: true },
+  // 3) Solo evaluadores (rol EVALUADOR) entran en la redistribución
+  const asignacionesEvaluadores = await prisma.asignaciones.findMany({
+    where: {
+      categoria_id: categoriaId,
+      estado: true,
+      usuario: {
+        rol: "EVALUADOR",
+      },
+    },
     orderBy: { id: "asc" },
   });
 
-  if (!asignacionesActivas.length || !total) {
-    // Si no hay participaciones o no hay evaluadores activos,
-    // limpiamos índices de todas las asignaciones de la categoría
+  // Si no hay participaciones o no hay evaluadores activos:
+  if (!asignacionesEvaluadores.length || !total) {
+    // Limpiamos índices de TODAS las asignaciones de la categoría
     await prisma.asignaciones.updateMany({
       where: { categoria_id: categoriaId },
       data: { indice_inicio: null, indice_fin: null },
@@ -72,14 +103,15 @@ async function redistribuirParticipaciones(categoriaId: number): Promise<void> {
     return;
   }
 
-  const evaluadoresCount = asignacionesActivas.length;
+  // 4) Repartir las participaciones solo entre evaluadores
+  const evaluadoresCount = asignacionesEvaluadores.length;
   const base = Math.floor(total / evaluadoresCount);
   const resto = total % evaluadoresCount;
 
   let indiceActual = 1;
 
-  for (let i = 0; i < asignacionesActivas.length; i++) {
-    const asignacion = asignacionesActivas[i];
+  for (let i = 0; i < asignacionesEvaluadores.length; i++) {
+    const asignacion = asignacionesEvaluadores[i];
 
     let cantidad = base;
     // El sobrante se asigna al primer evaluador
@@ -100,7 +132,22 @@ async function redistribuirParticipaciones(categoriaId: number): Promise<void> {
 
     indiceActual += cantidad;
   }
+
+  // 5) Asegurar que RESPONSABLES (u otros roles) queden siempre en null
+  await prisma.asignaciones.updateMany({
+    where: {
+      categoria_id: categoriaId,
+      usuario: {
+        rol: { not: "EVALUADOR" },
+      },
+    },
+    data: {
+      indice_inicio: null,
+      indice_fin: null,
+    },
+  });
 }
+
 
 // ===============================
 // GET Categorías con evaluadores asignados
@@ -147,8 +194,10 @@ export async function listarCategoriasConEvaluadoresSrv(
   const resultado: CategoriaConEvaluadoresDTO[] = categorias.map((cat) => {
     const totalPart = cat.participaciones.length;
 
-    const evaluadores: EvaluadorAsignadoDTO[] = cat.asignaciones.map(
-      (asig) => {
+    const evaluadores: EvaluadorAsignadoDTO[] = cat.asignaciones
+      // 🔹 Solo usuarios con rol EVALUADOR
+      .filter((asig: any) => asig.usuario?.rol === "EVALUADOR")
+      .map((asig: any) => {
         let apellidoInicio: string | null = null;
         let apellidoFin: string | null = null;
 
@@ -158,7 +207,9 @@ export async function listarCategoriasConEvaluadoresSrv(
           asig.indice_inicio <= totalPart
         ) {
           const pIni = cat.participaciones[asig.indice_inicio - 1];
-          apellidoInicio = pIni ? etiquetaParticipacion(pIni) : null;
+          apellidoInicio = pIni
+            ? etiquetaParticipacion(pIni, cat.modalidad)
+            : null;
         }
 
         if (
@@ -167,7 +218,9 @@ export async function listarCategoriasConEvaluadoresSrv(
           asig.indice_fin <= totalPart
         ) {
           const pFin = cat.participaciones[asig.indice_fin - 1];
-          apellidoFin = pFin ? etiquetaParticipacion(pFin) : null;
+          apellidoFin = pFin
+            ? etiquetaParticipacion(pFin, cat.modalidad)
+            : null;
         }
 
         const u = asig.usuario;
@@ -183,8 +236,7 @@ export async function listarCategoriasConEvaluadoresSrv(
           apellidoIndiceInicialParticipacion: apellidoInicio,
           apellidoIndiceFinalParticipacion: apellidoFin,
         };
-      }
-    );
+      });
 
     return {
       idCategoria: cat.id,
@@ -197,6 +249,7 @@ export async function listarCategoriasConEvaluadoresSrv(
 
   return resultado;
 }
+
 
 // ===============================
 // GET Evaluadores disponibles para una categoría
@@ -218,39 +271,56 @@ export async function listarEvaluadoresDisponiblesSrv(
     };
   }
 
+  // Todos los usuarios que tienen alguna asignación (activa o no) en ESTA categoría
   const asignacionesCategoria = await prisma.asignaciones.findMany({
     where: {
       categoria_id: categoriaId,
-      estado: true,
+      // sin filtro de estado: cuenta activas e inactivas
     },
     select: {
       usuario_id: true,
     },
   });
 
-  const idsAsignados = new Set(
+  const idsAsignadosCategoria = new Set(
     asignacionesCategoria.map((a) => a.usuario_id)
   );
 
-  const evaluadores = await prisma.usuarios.findMany({
+  // Candidatos: EVALUADOR o RESPONSABLE, activos
+  const candidatos = await prisma.usuarios.findMany({
     where: {
-      rol: "EVALUADOR",
       estado: true,
+      rol: { in: ["EVALUADOR", "RESPONSABLE"] }, // nunca ADMINISTRADOR
     },
     include: {
-      asignaciones: {
-        where: { estado: true },
-      },
+      // TODAS las asignaciones (para saber si el responsable tiene alguna
+      // y para contar las activas del evaluador)
+      asignaciones: true,
     },
     orderBy: [{ nombre: "asc" }, { primer_apellido: "asc" }],
   });
 
-  const filtrados = evaluadores.filter((u) => {
-    const activas = u.asignaciones.filter((a) => a.estado).length;
+  const filtrados = candidatos.filter((u) => {
+    const totalAsignaciones = u.asignaciones.length;
+    const asignacionesActivas = u.asignaciones.filter((a) => a.estado).length;
 
-    if (activas >= 5) return false; // ya llegó a su límite global
-    if (idsAsignados.has(u.id)) return false; // ya está asignado en esta categoría
+    // 1) Reglas para EVALUADOR
+    if (u.rol === "EVALUADOR") {
+      // límite global de 5 asignaciones activas
+      if (asignacionesActivas >= 5) return false;
 
+      // si ya tiene asignación (activa o no) en esta categoría → no mostrar
+      if (idsAsignadosCategoria.has(u.id)) return false;
+    }
+
+    // 2) Reglas para RESPONSABLE
+    if (u.rol === "RESPONSABLE") {
+      // si ya tiene CUALQUIER registro en asignaciones (activo o no) → no mostrar
+      if (totalAsignaciones > 0) return false;
+      // implícitamente, si tuviera algo en esta categoría también queda fuera
+    }
+
+    // 3) Filtro de búsqueda (nombre completo o CI)
     const nombreCompleto = buildNombreCompletoUsuario({
       nombre: u.nombre,
       primer_apellido: u.primer_apellido,
@@ -278,6 +348,7 @@ export async function listarEvaluadoresDisponiblesSrv(
     }),
   }));
 }
+
 
 // ===============================
 // Asignar evaluador a categoría
@@ -307,10 +378,14 @@ export async function asignarEvaluadorCategoriaSrv(
     where: { id: evaluadorId },
   });
 
-  if (!evaluador || evaluador.rol !== "EVALUADOR") {
+  // Ahora permitimos EVALUADOR o RESPONSABLE
+  if (
+    !evaluador ||
+    (evaluador.rol !== "EVALUADOR" && evaluador.rol !== "RESPONSABLE")
+  ) {
     throw {
       codigo: "EVALUADOR_NO_VALIDO",
-      mensaje: "El usuario no existe o no es evaluador.",
+      mensaje: "El usuario no existe o no tiene un rol válido para evaluar.",
     };
   }
 
@@ -319,6 +394,29 @@ export async function asignarEvaluadorCategoriaSrv(
       codigo: "EVALUADOR_INACTIVO",
       mensaje: "El evaluador está inactivo.",
     };
+  }
+
+  // Si es RESPONSABLE, lo convertimos a EVALUADOR antes de asignarlo
+  let rolCambiado = false;
+  if (evaluador.rol === "RESPONSABLE") {
+    await prisma.usuarios.update({
+      where: { id: evaluador.id },
+      data: { rol: "EVALUADOR" },
+    });
+    rolCambiado = true;
+
+    // Log del cambio de rol (opcional pero útil)
+    await prisma.logs.create({
+      data: {
+        entidad: "usuario",
+        entidad_id: evaluador.id,
+        campo: "rol",
+        valor_anterior: "RESPONSABLE",
+        valor_nuevo: "EVALUADOR",
+        usuario_id: usuarioAuthId,
+        motivo: "Cambio de rol de RESPONSABLE a EVALUADOR para asignación de categoría",
+      },
+    });
   }
 
   const asignacionesCategoriaActivas = await prisma.asignaciones.findMany({
@@ -400,6 +498,7 @@ export async function asignarEvaluadorCategoriaSrv(
       valor_nuevo: JSON.stringify({
         categoria_id: categoriaId,
         usuario_id: evaluadorId,
+        rol_cambiado: rolCambiado ? "RESPONSABLE→EVALUADOR" : undefined,
       }),
       usuario_id: usuarioAuthId,
       motivo: reactivada
@@ -410,6 +509,7 @@ export async function asignarEvaluadorCategoriaSrv(
 
   return { asignacion, reactivada };
 }
+
 
 // ===============================
 // Eliminar (desactivar) asignación
@@ -429,36 +529,40 @@ export async function eliminarAsignacionEvaluadorSrv(
     },
   });
 
-  if (!asignacion || !asignacion.estado) {
+  if (!asignacion) {
     throw {
       codigo: "ASIGNACION_NO_ENCONTRADA",
       mensaje:
-        "La asignación del evaluador a la categoría no existe o ya está inactiva.",
+        "La asignación del evaluador a la categoría no existe.",
     };
   }
 
-  const asignacionActualizada = await prisma.asignaciones.update({
+  // Eliminación FÍSICA de la asignación
+  const asignacionEliminada = await prisma.asignaciones.delete({
     where: { id: asignacion.id },
-    data: {
-      estado: false,
-      indice_inicio: null,
-      indice_fin: null,
-    },
   });
 
+  // Redistribuir participaciones entre las asignaciones que queden
   await redistribuirParticipaciones(categoriaId);
 
   await prisma.logs.create({
     data: {
       entidad: "asignacion",
       entidad_id: asignacion.id,
-      campo: "estado",
-      valor_anterior: "true",
-      valor_nuevo: "false",
+      campo: "eliminar",
+      valor_anterior: JSON.stringify({
+        estado: asignacion.estado,
+        indice_inicio: asignacion.indice_inicio,
+        indice_fin: asignacion.indice_fin,
+        usuario_id: asignacion.usuario_id,
+        categoria_id: asignacion.categoria_id,
+      }),
+      valor_nuevo: null,
       usuario_id: usuarioAuthId,
-      motivo: "Desactivación de asignación de evaluador a categoría",
+      motivo: "Eliminación de asignación de evaluador a categoría",
     },
   });
 
-  return { asignacion: asignacionActualizada };
+  return { asignacion: asignacionEliminada };
 }
+

@@ -50,6 +50,7 @@ export async function listarCategoriasSrv(
               primer_apellido: true,
               segundo_apellido: true,
               estado: true,
+              rol: true,              // 👈 IMPORTANTE: traemos el rol
             },
           },
         },
@@ -63,22 +64,26 @@ export async function listarCategoriasSrv(
   });
 
   return categorias.map((cat: any) => {
-    const asignacion = cat.asignaciones.find(
-      (a: any) => a.usuario && a.usuario.estado
+    // 👇 Sólo consideramos como responsable a un usuario con rol RESPONSABLE
+    const asignacionResponsable = cat.asignaciones.find(
+      (a: any) =>
+        a.usuario &&
+        a.usuario.estado &&
+        a.usuario.rol === Rol.RESPONSABLE
     );
 
-    const responsable: ResponsableDTO = asignacion
+    const responsable: ResponsableDTO = asignacionResponsable
       ? {
-          id: asignacion.usuario.id,
+          id: asignacionResponsable.usuario.id,
           nombreCompleto: [
-            asignacion.usuario.nombre,
-            asignacion.usuario.primer_apellido,
-            asignacion.usuario.segundo_apellido,
+            asignacionResponsable.usuario.nombre,
+            asignacionResponsable.usuario.primer_apellido,
+            asignacionResponsable.usuario.segundo_apellido,
           ]
             .filter(Boolean)
             .join(" "),
         }
-      : null;
+      : null; // 👈 Si no hay responsable, va null
 
     return {
       id: cat.id,
@@ -96,6 +101,7 @@ export async function listarCategoriasSrv(
     };
   });
 }
+
 
 type CrearCategoriaPayload = {
   gestion?: number;
@@ -284,40 +290,19 @@ export async function asignarResponsableCategoriaSrv(
     };
   }
 
-  // No se puede asignar un responsable a más de una categoría
-  const asignacionExistenteUsuario = await prisma.asignaciones.findFirst({
-    where: {
-      usuario_id: usuarioId,
-      estado: true,
-    },
+  // Todas las asignaciones (activas o no) de este usuario
+  const asignacionesUsuario = await prisma.asignaciones.findMany({
+    where: { usuario_id: usuarioId },
+    orderBy: { id: "asc" },
   });
 
-  if (
-    asignacionExistenteUsuario &&
-    asignacionExistenteUsuario.categoria_id !== idCategoria
-  ) {
-    throw {
-      codigo: "RESPONSABLE_YA_ASIGNADO",
-      mensaje:
-        "Este usuario ya está asignado como responsable en otra categoría",
-    };
-  }
-
-  // Asignación actual de la categoría (si ya tenía responsable)
-  const asignacionActual = await prisma.asignaciones.findFirst({
+  // Asignación actual de la categoría (responsable actual, si hay)
+  const asignacionActualCategoria = await prisma.asignaciones.findFirst({
     where: { categoria_id: idCategoria, estado: true },
   });
 
   const responsableAnteriorId: number | null =
-    asignacionActual?.usuario_id ?? null;
-
-  // Asignación (o reactivación) para este usuario+categoría
-  const asignacionCategoriaUsuario = await prisma.asignaciones.findFirst({
-    where: {
-      categoria_id: idCategoria,
-      usuario_id: usuarioId,
-    },
-  });
+    asignacionActualCategoria?.usuario_id ?? null;
 
   await prisma.$transaction(async (tx: any) => {
     // Si era EVALUADOR, al asignar se vuelve RESPONSABLE
@@ -328,26 +313,38 @@ export async function asignarResponsableCategoriaSrv(
       });
     }
 
-    // Desactivar responsable anterior (si era otro usuario)
-    if (
-      asignacionActual &&
-      (!asignacionCategoriaUsuario ||
-        asignacionActual.id !== asignacionCategoriaUsuario.id)
-    ) {
-      await tx.asignaciones.update({
-        where: { id: asignacionActual.id },
-        data: { estado: false },
-      });
-    }
+    // ====== Elegir / crear la ÚNICA fila de asignación para este usuario ======
+    // Preferimos una asignación que ya tenga esta categoría si existe
+    let baseAsignacion =
+      asignacionesUsuario.find(
+        (a: any) => a.categoria_id === idCategoria
+      ) ?? asignacionesUsuario[0] ?? null;
 
-    // Reactivar/crear asignación para este usuario
-    if (asignacionCategoriaUsuario) {
-      await tx.asignaciones.update({
-        where: { id: asignacionCategoriaUsuario.id },
-        data: { estado: true },
+    if (baseAsignacion) {
+      // Eliminar cualquier otra fila de asignación de este usuario
+      const idsEliminar = asignacionesUsuario
+        .filter((a: any) => a.id !== baseAsignacion.id)
+        .map((a: any) => a.id);
+
+      if (idsEliminar.length > 0) {
+        await tx.asignaciones.deleteMany({
+          where: { id: { in: idsEliminar } },
+        });
+      }
+
+      // Reutilizar la fila base: moverla a esta categoría y activarla
+      baseAsignacion = await tx.asignaciones.update({
+        where: { id: baseAsignacion.id },
+        data: {
+          categoria_id: idCategoria,
+          estado: true,
+          indice_inicio: null,
+          indice_fin: null,
+        },
       });
     } else {
-      await tx.asignaciones.create({
+      // No tenía ninguna fila en asignaciones → crear la primera y única
+      baseAsignacion = await tx.asignaciones.create({
         data: {
           usuario_id: usuarioId,
           categoria_id: idCategoria,
@@ -357,8 +354,19 @@ export async function asignarResponsableCategoriaSrv(
         },
       });
     }
+
+    // ====== Eliminar responsable anterior de esta categoría (si es otro) ======
+    if (
+      asignacionActualCategoria &&
+      asignacionActualCategoria.id !== baseAsignacion.id
+    ) {
+      await tx.asignaciones.delete({
+        where: { id: asignacionActualCategoria.id },
+      });
+    }
   });
 
+  // Volvemos a leer la categoría ya con el responsable actualizado
   const categoriaConAsignacion = await prisma.categorias.findUnique({
     where: { id: idCategoria },
     include: {
@@ -422,6 +430,7 @@ export async function asignarResponsableCategoriaSrv(
     responsableAnteriorId,
   };
 }
+
 
 type FiltroResponsablesDisponibles = {
   gestion?: number;

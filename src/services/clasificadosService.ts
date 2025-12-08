@@ -18,7 +18,7 @@ export const obtenerClasificados = async (
   gestion: number = new Date().getFullYear()
 ): Promise<{ data: ClasificadoDTO[]; nota_min_clasificacion: number }> => {
   try {
-    // 1. Verificar si los resultados están publicados en la fase clasificatoria
+    // 1. Validar fase clasificatoria publicada
     const faseClasificatoria = await prisma.fases.findFirst({
       where: {
         gestion,
@@ -28,10 +28,10 @@ export const obtenerClasificados = async (
     });
 
     if (!faseClasificatoria) {
-      return { data: [], nota_min_clasificacion: 0 }; // No retornar nada si no están publicados
+      return { data: [], nota_min_clasificacion: 0 };
     }
 
-    // 2. Obtener la categoría con nota_min_clasificacion y estado = true
+    // 2. Obtener categoría activa con nota mínima
     const categoria = await prisma.categorias.findFirst({
       where: {
         gestion,
@@ -46,16 +46,16 @@ export const obtenerClasificados = async (
     });
 
     if (!categoria) {
-      return { data: [], nota_min_clasificacion: 0 }; // Si la categoría no existe o está inactiva
+      return { data: [], nota_min_clasificacion: 0 };
     }
 
-    // 3. Obtener participaciones con estados activos
+    // 3. Obtener participaciones válidas
     const participaciones = await prisma.participacion.findMany({
       where: {
         categoria_id: categoria.id,
         OR: [
-          { olimpista: { estado: true } }, // Olimpista activo
-          { equipo: { miembros: { every: { olimpista: { estado: true } } } } }, // Todos los miembros del equipo activos
+          { olimpista: { estado: true } },
+          { equipo: { miembros: { every: { olimpista: { estado: true } } } } },
         ],
       },
       select: {
@@ -78,12 +78,23 @@ export const obtenerClasificados = async (
           take: 1,
         },
       },
-      orderBy: { id: 'asc' },
     });
 
+    // 4. Procesar datos
     const data = participaciones.map(p => {
       const esIndividual = p.categoria.modalidad === ModalidadCategoria.INDIVIDUAL;
       const nota = p.evaluaciones[0]?.nota ? Number(p.evaluaciones[0].nota) : null;
+
+      // LÓGICA DE ESTADO
+      let estadoFinal: 'CLASIFICADO' | 'NO_CLASIFICADO' | 'DESCALIFICADO';
+
+      if (p.estado === 'DESCALIFICADO') {
+        estadoFinal = 'DESCALIFICADO';
+      } else {
+        estadoFinal = nota !== null && nota >= categoria.nota_min_clasificacion
+          ? 'CLASIFICADO'
+          : 'NO_CLASIFICADO';
+      }
 
       return {
         id: p.id,
@@ -95,12 +106,24 @@ export const obtenerClasificados = async (
           : 'Equipo grupal',
         nota,
         modalidad: p.categoria.modalidad,
-        estado: p.estado,
+        estado: estadoFinal,
       };
     });
 
+    // 5. ORDENAMIENTO: nota descendente + descalificados al final
+    const ordenados = data.sort((a, b) => {
+      // Descalificados al final
+      if (a.estado === 'DESCALIFICADO' && b.estado !== 'DESCALIFICADO') return 1;
+      if (b.estado === 'DESCALIFICADO' && a.estado !== 'DESCALIFICADO') return -1;
+
+      // Ordenar por nota (mayor a menor)
+      const notaA = a.nota ?? 0;
+      const notaB = b.nota ?? 0;
+      return notaB - notaA;
+    });
+
     return {
-      data,
+      data: ordenados,
       nota_min_clasificacion: categoria.nota_min_clasificacion,
     };
   } catch (error) {
