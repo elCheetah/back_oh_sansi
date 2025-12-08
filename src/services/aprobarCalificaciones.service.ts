@@ -1,3 +1,4 @@
+
 // src/services/aprobarCalificaciones.service.ts
 import prisma from "../config/database";
 import {
@@ -59,6 +60,7 @@ export interface FilaAprobacionDTO {
   idEvaluacion: number | null; // null → no hay evaluación, no se puede aprobar/rechazar
   nombreParticipante: string;
   nota: number | null;
+  comentario: string | null;
   validado: boolean | null; // null cuando no hay evaluación
 }
 
@@ -675,6 +677,7 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
           participacion_id: true,
           nota: true,
           validado: true,
+          comentario: true,
         },
       }),
     ]);
@@ -719,6 +722,10 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
     const nota = evActual ? Number(evActual.nota) : null;
     const validado =
       evActual !== undefined ? evActual.validado : null;
+    const comentario =
+      evActual && evActual.comentario != null
+        ? evActual.comentario
+        : null;
 
     // Nombre participante/equipo
     let nombreParticipante = "";
@@ -742,6 +749,7 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
       idEvaluacion,
       nombreParticipante,
       nota,
+      comentario,
       validado,
     });
   }
@@ -840,7 +848,7 @@ export async function aprobarEvaluacionSrv(params: {
     !asignacionResponsable ||
     !asignacionResponsable.categoria ||
     asignacionResponsable.categoria.id !==
-      evaluacion.participacion.categoria_id
+    evaluacion.participacion.categoria_id
   ) {
     return {
       ok: false,
@@ -912,7 +920,7 @@ export async function rechazarEvaluacionSrv(params: {
     !asignacionResponsable ||
     !asignacionResponsable.categoria ||
     asignacionResponsable.categoria.id !==
-      evaluacion.participacion.categoria_id
+    evaluacion.participacion.categoria_id
   ) {
     return {
       ok: false,

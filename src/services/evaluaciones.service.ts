@@ -39,6 +39,7 @@ export interface ParticipanteAsignadoDTO {
   estadoNota: EstadoNota;
   validadoPorResponsable: boolean | null;
   medalla: TipoMedalla | null;
+  comentario: string | null;
 }
 
 
@@ -673,6 +674,7 @@ export async function getParticipantesAsignadosEnCategoria(params: {
 
     const notaActual = evActual ? Number(evActual.nota) : null;
     const validadoPorResponsable = evActual ? evActual.validado : null;
+    const comentarioActual = evActual ? evActual.comentario : null;
 
     let estadoNota: EstadoNota;
     if (estaDescalificado) {
@@ -709,6 +711,7 @@ export async function getParticipantesAsignadosEnCategoria(params: {
         estadoNota,
         validadoPorResponsable,
         medalla,
+        comentario: comentarioActual,
       });
     } else {
       if (!p.equipo) continue;
@@ -723,6 +726,7 @@ export async function getParticipantesAsignadosEnCategoria(params: {
         estadoNota,
         validadoPorResponsable,
         medalla,
+        comentario: comentarioActual,
       });
     }
   }

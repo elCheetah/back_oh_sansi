@@ -1,6 +1,5 @@
 import {
   PrismaClient,
-  EstadoParticipacion,
   ModalidadCategoria,
   RolEquipo,
 } from "@prisma/client";
@@ -40,7 +39,6 @@ export const InscritosGrupalesService = {
   async listar(): Promise<InscritoGrupalDTO[]> {
     const participaciones = await prisma.participacion.findMany({
       where: {
-        estado: { not: EstadoParticipacion.DESCALIFICADO },
         equipo_id: { not: null },
         categoria: {
           modalidad: ModalidadCategoria.GRUPAL,
@@ -118,22 +116,49 @@ export const InscritosGrupalesService = {
     return resultado;
   },
 
+  // Elimina participaciones del grupo y el equipo (con sus miembros)
   async bajaParticipacionGrupo(grupoId: number) {
-    const result = await prisma.participacion.updateMany({
+    // Primero obtenemos las participaciones del grupo (por si quieres saber cuántas borró)
+    const participaciones = await prisma.participacion.findMany({
       where: {
         equipo_id: grupoId,
-        estado: { not: EstadoParticipacion.DESCALIFICADO },
         categoria: {
           modalidad: ModalidadCategoria.GRUPAL,
         },
       },
-      data: {
-        estado: EstadoParticipacion.DESCALIFICADO,
-      },
+      select: { id: true },
     });
 
+    const idsParticipaciones = participaciones.map((p) => p.id);
+
+    const [deletedEvals, deletedParticipaciones, deletedMiembros, deletedEquipos] =
+      await prisma.$transaction([
+        // (opcional) limpiar evaluaciones explícitamente
+        prisma.evaluaciones.deleteMany({
+          where: {
+            participacion_id: { in: idsParticipaciones },
+          },
+        }),
+        prisma.participacion.deleteMany({
+          where: {
+            id: { in: idsParticipaciones },
+          },
+        }),
+        prisma.miembrosEquipo.deleteMany({
+          where: {
+            equipo_id: grupoId,
+          },
+        }),
+        prisma.equipos.deleteMany({
+          where: { id: grupoId },
+        }),
+      ]);
+
     return {
-      updated: result.count,
+      deletedEvaluaciones: deletedEvals.count,
+      deletedParticipaciones: deletedParticipaciones.count,
+      deletedMiembros: deletedMiembros.count,
+      deletedEquipos: deletedEquipos.count,
     };
   },
 
