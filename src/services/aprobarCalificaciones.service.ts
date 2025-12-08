@@ -613,7 +613,7 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
     TipoFase.CLASIFICATORIA
   );
 
-  // Participaciones asignadas con detalle
+  // Participaciones asignadas con detalle (según rango del evaluador)
   const participacionesAsignadas =
     await obtenerParticipacionesAsignadasConDetalle(
       categoria.id,
@@ -650,13 +650,13 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
 
   const idsAsignados = participacionesAsignadas.map((p) => p.id);
 
-  // Evaluaciones de CLASIFICATORIA y de la fase actual de este evaluador
+  // Evaluaciones de CLASIFICATORIA y de la fase actual
+  // ⚠️ OJO: ya NO filtramos por evaluador_id, solo por fase + participacion
   const [evaluacionesClasif, evaluacionesActual] =
     await prisma.$transaction([
       prisma.evaluaciones.findMany({
         where: {
           fase_id: faseClasif.id,
-          evaluador_id: evaluador.id,
           participacion_id: { in: idsAsignados },
         },
         select: {
@@ -669,7 +669,6 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
       prisma.evaluaciones.findMany({
         where: {
           fase_id: faseActual.id,
-          evaluador_id: evaluador.id,
           participacion_id: { in: idsAsignados },
         },
         select: {
@@ -682,21 +681,64 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
       }),
     ]);
 
+  // ==========
+  // Mapas con PRIORIDAD (una evaluación por participación)
+  // ==========
+
+  // CLASIFICATORIA: elegimos la mejor evaluación por participación
   const mapaEvClasif = new Map<
     number,
     (typeof evaluacionesClasif)[number]
   >();
+
   for (const ev of evaluacionesClasif) {
-    mapaEvClasif.set(ev.participacion_id, ev);
+    const actual = mapaEvClasif.get(ev.participacion_id);
+
+    // 1) Si no había ninguna, guardamos esta
+    if (!actual) {
+      mapaEvClasif.set(ev.participacion_id, ev);
+      continue;
+    }
+
+    // 2) Si la anterior no estaba validada y esta sí ⇒ preferimos esta
+    if (!actual.validado && ev.validado) {
+      mapaEvClasif.set(ev.participacion_id, ev);
+      continue;
+    }
+
+    // 3) Si tienen el mismo estado de validado ⇒ nos quedamos con la de mayor id (más reciente)
+    if (actual.validado === ev.validado && ev.id > actual.id) {
+      mapaEvClasif.set(ev.participacion_id, ev);
+    }
   }
 
+  // FASE ACTUAL (CLASIF o FINAL): misma lógica de prioridad
   const mapaEvActual = new Map<
     number,
     (typeof evaluacionesActual)[number]
   >();
+
   for (const ev of evaluacionesActual) {
-    mapaEvActual.set(ev.participacion_id, ev);
+    const actual = mapaEvActual.get(ev.participacion_id);
+
+    if (!actual) {
+      mapaEvActual.set(ev.participacion_id, ev);
+      continue;
+    }
+
+    if (!actual.validado && ev.validado) {
+      mapaEvActual.set(ev.participacion_id, ev);
+      continue;
+    }
+
+    if (actual.validado === ev.validado && ev.id > actual.id) {
+      mapaEvActual.set(ev.participacion_id, ev);
+    }
   }
+
+  // ==========
+  // Armar filas
+  // ==========
 
   const filas: FilaAprobacionDTO[] = [];
 
@@ -796,6 +838,7 @@ export async function getTablaAprobacionPorEvaluadorSrv(params: {
     },
   };
 }
+
 
 /**
  * =========================
